@@ -1,0 +1,17 @@
+{
+  "name": "TIBOK Patient Registry",
+  "short_name": "TIBOK",
+  "description": "Secure Health Portal for BHWs",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#dc2626",
+  "icons": [
+    {
+      "src": "/static/logo.png",
+      "sizes": "192x192 512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

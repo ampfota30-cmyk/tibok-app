@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
+  <title>TIBOK • Secure Login</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  
+  <script>
+    const savedTheme = localStorage.getItem('tibok_theme') || 'light';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+  </script>
+
+  <style>
+    :root {
+      --bg: #f8fafc; 
+      --surface: #ffffff; 
+      --text: #0f172a; 
+      --muted: #64748b; 
+      --border: rgba(15, 23, 42, 0.10);
+      
+      /* Red Brand */
+      --primary: #dc2626; 
+      --accent: #991b1b; 
+      --danger: #ef4444;
+      
+      --ring: 0 0 0 4px rgba(220, 38, 38, 0.14);
+      --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+      --shadow: 0 20px 40px rgba(220, 38, 38, 0.12); /* Red tinted shadow */
+    }
+    
+    [data-theme="dark"] {
+      --bg: #0b1220; 
+      --surface: #111c2f; 
+      --text: #f8fafc; 
+      --muted: #9aa7bd; 
+      --border: rgba(248, 250, 252, 0.10);
+      
+      --primary: #ef4444; 
+      --accent: #b91c1c;
+      
+      --ring: 0 0 0 4px rgba(239, 68, 68, 0.16);
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.35);
+      --shadow: 0 22px 80px rgba(0,0,0,0.55);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; transition: background-color .18s ease, border-color .18s ease, color .18s ease, box-shadow .18s ease; }
+    
+    body { 
+        background: var(--bg); color: var(--text); 
+        display: flex; align-items: center; justify-content: center; 
+        min-height: 100vh; padding: 20px; 
+        background-image: 
+            radial-gradient(900px 520px at 15% 45%, rgba(220, 38, 38, 0.08), transparent 55%),
+            radial-gradient(820px 520px at 85% 25%, rgba(153, 27, 27, 0.07), transparent 60%);
+        background-attachment: fixed;
+    }
+
+    .login-card { 
+        background: var(--surface); 
+        padding: 40px 32px; 
+        border-radius: 28px; 
+        box-shadow: var(--shadow); 
+        width: 100%; max-width: 420px; 
+        border: 1px solid var(--border); 
+        text-align: center; position: relative; z-index: 10;
+        backdrop-filter: blur(14px);
+    }
+    
+    /* THEME TOGGLE IS NOW SAFELY INSIDE THE CARD */
+    .theme-toggle { position: absolute; top: 16px; right: 16px; background: transparent; border: none; width: 40px; height: 40px; display: grid; place-items: center; font-size: 22px; cursor: pointer; color: var(--muted); transition: 0.2s;}
+    .theme-toggle:hover { transform: scale(1.1); color: var(--text);}
+
+    .logo { width: 80px; height: 80px; margin: 0 auto 20px; border-radius: 22px; background: linear-gradient(135deg, var(--primary), var(--accent)); display: grid; place-items: center; color: white; box-shadow: 0 12px 24px rgba(220, 38, 38, 0.25);}
+    
+    .brand-title { font-size: 36px; font-weight: 900; background: linear-gradient(135deg, var(--primary), var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 4px; letter-spacing: -1px;}
+    .brand-subtitle { color: var(--muted); font-size: 13px; margin-bottom: 32px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px;}
+    
+    .input-group { text-align: left; margin-bottom: 20px; position: relative;}
+    label { display: block; font-size: 12px; font-weight: 800; color: var(--muted); text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;}
+    input { width: 100%; padding: 16px; border-radius: 14px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 16px; outline: none; transition: 0.2s; font-weight: 600;}
+    input:focus { border-color: var(--primary); box-shadow: var(--ring);}
+    
+    .btn { width: 100%; padding: 16px; border-radius: 14px; background: linear-gradient(180deg, var(--primary), var(--accent)); color: white; border: none; font-size: 16px; font-weight: 800; cursor: pointer; box-shadow: 0 8px 20px rgba(220, 38, 38, 0.25); margin-top: 12px; transition: 0.2s;}
+    .btn:active { transform: scale(0.98); }
+    .btn:hover { filter: brightness(1.05); box-shadow: 0 12px 28px rgba(220, 38, 38, 0.35); }
+    
+    .error { color: var(--danger); font-size: 14px; font-weight: 700; margin-bottom: 24px; background: rgba(239,68,68,0.1); padding: 14px; border-radius: 12px; border: 1px solid rgba(239,68,68,.2);}
+    .privacy-notice { font-size: 11px; color: var(--muted); margin-top: 32px; line-height: 1.6; font-weight: 600;}
+    
+    .eye-btn { position: absolute; right: 16px; top: 38px; cursor: pointer; font-size: 18px; opacity: 0.5; transition: 0.2s; user-select: none; }
+    .eye-btn:hover { opacity: 1; }
+  </style>
+<style>
+    /* 🚀 SPLASH SCREEN CSS - RED THEME */
+    .splash-screen { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #f8fafc; z-index: 9999999; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; transition: opacity 0.5s ease, visibility 0.5s ease; }
+    .splash-screen.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+    .splash-logo { width: 80px; height: 80px; border-radius: 24px; background: transparent; display: grid; place-items: center; margin-bottom: 24px; animation: pulseLogo 2s infinite; }
+    @keyframes pulseLogo { 0% { transform: scale(1); box-shadow: 0 16px 32px rgba(220, 38, 38, 0.25); } 50% { transform: scale(1.05); box-shadow: 0 20px 40px rgba(220, 38, 38, 0.4); } 100% { transform: scale(1); box-shadow: 0 16px 32px rgba(220, 38, 38, 0.25); } }
+</style>
+</head>
+<body>
+<div class="splash-screen" id="splashScreen">
+     <div class="splash-logo">
+        <img src="/static/logo.png" style="width: 80px; height: 80px; border-radius: 24px; object-fit: cover; background: white;">
+     </div>
+     <h1 style="
+  font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Inter, Roboto, Helvetica, Arial;
+  font-size: 42px;
+  font-weight: 900;
+  line-height: 0.95;
+  background: linear-gradient(135deg, #dc2626, #991b1b);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  margin-bottom: 6px;
+  letter-spacing: -0.08em;
+  filter: drop-shadow(0 1px 0 rgba(0,0,0,0.10));
+">
+  TIBOK
+</h1>
+
+<p style="
+  font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Inter, Roboto, Helvetica, Arial;
+  color: #101828;
+  font-weight: 700;
+  font-size: 16px;
+  line-height: 1.25;
+  margin: 0 0 36px 0;
+  letter-spacing: -0.02em;
+  opacity: 0.9;
+">
+  Heart Monitoring App
+</p>
+
+
+     
+     <div style="font-size: 11px; font-weight: 800; color: #667085; text-transform: uppercase; letter-spacing: 1px; margin-top: 20px;">
+        A project by<br>
+        <span style="display: inline-block; margin-top: 6px; font-size: 16px; font-weight: 900; color: #dc2626;">Batch Napasnek 2028</span>
+     </div>
+  </div>
+  <div class="login-card">
+    <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn" title="Toggle Light/Dark Mode">☀️</button>
+<div class="brand-left" style="display:flex; align-items:center; justify-content:center; width:100%;">
+  <div class="logo" style="width:88px; height:88px; border-radius:22px; overflow:hidden; background:#fff; flex:0 0 auto; border:1px solid rgba(16,24,40,.10); box-shadow:0 16px 34px rgba(220, 38, 38, 0.14);">
+    <img src="/static/logo.png" alt="TIBOK" style="width:100%; height:100%; display:block; object-fit:cover; object-position:center; transform:scale(1.03);">
+  </div>
+</div>
+    <div class="brand-subtitle">Namorok Portal</div>
+    
+    {% if error %}
+    <div class="error">⚠️ {{ error }}</div>
+    {% endif %}
+    
+    <form method="POST" action="/login" onsubmit="saveUserLocally()">
+      <input type="hidden" name="next" value="{{ next_url }}">
+      
+      <div class="input-group">
+        <label>Username</label>
+        <input type="text" name="username" id="uName" required placeholder="Enter username">
+      </div>
+      <div class="input-group">
+        <label>Password</label>
+        <input type="password" name="password" id="loginPass" required placeholder="••••••••" style="padding-right: 46px;">
+        <span class="eye-btn" onclick="togglePass('loginPass', this)">👁️</span>
+      </div>
+
+     <div style="text-align:right; margin-top:-8px; margin-bottom:24px;">
+  <a href="#"
+   onclick="alert(`Forgot your password?
+
+Please contact your System Administrator to reset your account access.`); return false;"
+     style="
+       font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+       font-size: 13px;
+       color: var(--primary);
+       text-decoration: none;
+       font-weight: 600;
+       display: inline-flex;
+       align-items: center;
+       gap: 6px;
+       padding: 6px 10px;
+       border-radius: 10px;
+       transition: background .15s ease, opacity .15s ease, transform .15s ease;
+     "
+     onmouseover="this.style.background='rgba(220, 38, 38, 0.08)'; this.style.textDecoration='underline';"
+     onmouseout="this.style.background='transparent'; this.style.textDecoration='none';"
+     onmousedown="this.style.transform='scale(0.98)';"
+     onmouseup="this.style.transform='scale(1)';"
+  >
+    <span aria-hidden="true" style="opacity:.85;">🔒</span>
+    Forgot your password?
+  </a>
+</div>
+
+      
+      <button type="submit" class="btn">Login</button>
+    </form>
+    
+  <div class="privacy-notice">
+  Protected by Republic Act No. 10173 (Data Privacy Act of 2012). Data is collected and processed in accordance with applicable privacy standards.
+</div>
+
+  <script>
+    function updateIcon(theme) { document.getElementById('themeBtn').innerText = theme === 'dark' ? '☀️' : '🌙'; }
+    updateIcon(document.documentElement.getAttribute('data-theme'));
+    
+    function toggleTheme() {
+        const current = document.documentElement.getAttribute('data-theme');
+        const target = current === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', target);
+        localStorage.setItem('tibok_theme', target);
+        updateIcon(target);
+    }
+
+    function togglePass(inputId, iconEl) {
+        const inp = document.getElementById(inputId);
+        if (inp.type === 'password') { inp.type = 'text'; iconEl.innerText = '🙈'; } 
+        else { inp.type = 'password'; iconEl.innerText = '👁️'; }
+    }
+
+    // 🟢 SAVE LOGIN STATE LOCALLY FOR OFFLINE ACCESS
+    function saveUserLocally() {
+        const username = document.getElementById("uName").value;
+        const mockUser = {
+            username: username,
+            name: "BHW User", 
+            role: "bhw"
+        };
+        localStorage.setItem('tibok_user', JSON.stringify(mockUser));
+    }
+  </script>
+<script>
+    // 🚀 FORCE SPLASH REMOVAL (Unstoppable Version) 🚀
+    // This runs immediately and doesn't wait for the browser to be "ready"
+    (function() {
+        setTimeout(function() {
+            var splash = document.getElementById('splashScreen');
+            if (splash) {
+                // 1. Make it invisible immediately
+                splash.style.transition = "opacity 0.5s ease";
+                splash.style.opacity = '0';
+                
+                // 2. Allow clicks to pass through immediately (so you can type)
+                splash.style.pointerEvents = 'none'; 
+                
+                // 3. Physically remove it from the page a moment later
+                setTimeout(function() { 
+                    if(splash) splash.remove(); 
+                }, 600);
+            }
+        }, 2000); // 2 seconds max
+    })();
+</script>
+</body>
+</html>
