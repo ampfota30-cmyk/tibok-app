@@ -31,8 +31,7 @@
       --danger: #ef4444; --danger-bg: #fee2e2; 
       --radius: 18px; --radius2: 14px; 
       
-      /* 🟢 FONT SIZE ADJUSTMENT FOR BETTER READABILITY */
-      --base: 17px;
+      --base: 17px; /* 🟢 Larger Font Size */
 
       --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
       --shadow: 0 10px 26px rgba(220, 38, 38, 0.08);
@@ -125,9 +124,48 @@
     details.patient-card > summary { list-style:none; cursor:pointer; padding: 16px; outline: none; background: transparent;}
     details.patient-card > summary::-webkit-details-marker { display:none; }
     
-    details.purok-cluster { margin-bottom: 16px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface2); overflow: hidden; }
-    details.purok-cluster > summary { padding: 16px; cursor: pointer; list-style: none; font-weight: 900; font-size: 18px; color: var(--text); display: flex; justify-content: space-between; align-items: center; background: var(--surface); border-bottom: 1px solid var(--border);}
-    details.purok-cluster[open] > summary { color: var(--primary); border-bottom-color: var(--primary); }
+    /* 🟢 NEW CLEAN FOLDER UI FOR PUROK CLUSTERS */
+    details.purok-cluster { 
+        margin-bottom: 12px; 
+        border: none; 
+        background: transparent; 
+    }
+    details.purok-cluster > summary { 
+        padding: 16px 20px; 
+        cursor: pointer; 
+        list-style: none; 
+        display: flex; 
+        justify-content: space-between; 
+        align-items: center; 
+        background: var(--surface); 
+        border: 1px solid var(--border); 
+        border-radius: 14px;
+        box-shadow: var(--shadow-sm);
+        transition: 0.2s;
+    }
+    details.purok-cluster > summary:hover {
+        box-shadow: var(--shadow);
+        transform: translateY(-1px);
+    }
+    details.purok-cluster[open] > summary { 
+        border-bottom-left-radius: 0; 
+        border-bottom-right-radius: 0; 
+        border-bottom: 1px dashed var(--border);
+        color: var(--primary); 
+    }
+    details.purok-cluster > summary::-webkit-details-marker { display:none; }
+    
+    /* Container inside the details folder */
+    .cluster-content {
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        border-top: none;
+        border-bottom-left-radius: 14px;
+        border-bottom-right-radius: 14px;
+        padding: 16px;
+        display: grid;
+        gap: 12px;
+    }
     
     .row { display:flex; align-items:center; gap: 16px; flex-wrap: wrap;}
     .chev { color: var(--muted2); display:flex; align-items:center; transition: transform .2s;}
@@ -156,7 +194,7 @@
     .detail-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 20px; }
     .kv { border: 1px solid var(--border); border-radius: 12px; padding: 16px; background: var(--surface); }
     .kv .k { color: var(--muted); font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;}
-    .kv .v { margin-top: 6px; font-weight: 800; font-size: 17px; color: var(--text);} /* 🟢 Larger Info Values */
+    .kv .v { margin-top: 6px; font-weight: 800; font-size: 17px; color: var(--text);} 
     
     .extras-grid { display:grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px; }
     .innercard { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; display:flex; flex-direction:column; justify-content:space-between;}
@@ -186,7 +224,6 @@
     .modal-overlay.active .modal-box { transform: scale(1); }
     .danger-icon { width: 72px; height: 72px; border-radius: 50%; background: var(--danger-bg); color: var(--danger); display: grid; place-items: center; font-size: 32px; margin: 0 auto 20px; box-shadow: 0 0 0 8px rgba(239,68,68,0.05);}
     
-    /* 🟢 MEDICATION GRID STYLES */
     .meds-container { background: var(--surface2); padding: 16px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 16px;}
     .meds-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; max-height: 220px; overflow-y: auto;}
     .meds-grid label { font-size: 15px; font-weight: 600; text-transform: none; color: var(--text); display: flex; align-items: center; gap: 8px; margin: 0; cursor: pointer;}
@@ -200,11 +237,13 @@
         .mobile-only { display: flex !important; }
         .sidebar { position: fixed !important; top: 0 !important; left: 0 !important; width: 300px !important; height: 100vh !important; margin: 0 !important; border-radius: 0 !important; border: none !important; transform: translateX(-100%) !important; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important; z-index: 99999 !important; box-shadow: none !important;}
         .sidebar.open { transform: translateX(0) !important; box-shadow: 10px 0 30px rgba(0,0,0,0.5) !important; }
-        .sidebar-overlay { display: none; position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(16,24,40,0.6); backdrop-filter: blur(4px); z-index: 99998; }
+        .sidebar-overlay { display: none; position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(16,24,40,0.6); backdrop-filter: blur(4px); z-index: 99998; touch-action: none;}
         .sidebar-overlay.active { display: block !important; }
         
         .hamburger-btn { background: transparent; border: none; font-size: 24px; padding-right: 12px; margin-right: 8px; border-right: 1px solid var(--border); cursor: pointer; color: var(--text); display: block;}
         .close-btn { background: var(--surface2); border: none; width: 36px; height: 36px; border-radius: 10px; font-size: 18px; cursor: pointer; color: var(--text); font-weight: bold; display: flex !important; align-items: center !important; justify-content: center !important; padding: 0 !important;}
+        
+        .topbar { padding: 16px !important; border-radius: 12px !important; margin-bottom: 0 !important; top: 0 !important;}
         
         .kpis { display: flex !important; flex-direction: column !important; gap: 8px !important; margin-bottom: 24px !important;}
         .kpi { display: flex !important; align-items: center !important; padding: 12px 16px !important; gap: 14px !important; border-top: none !important; border-left: 4px solid transparent !important; border-radius: 14px !important; height: auto !important;}
@@ -635,6 +674,7 @@
     <div class="cardhead"><h3>🚨 Ilocos Norte Emergency Hotlines</h3></div>
 
     <div style="padding: 24px; display: grid; gap: 16px;">
+      
       <div style="border: 1px solid rgba(220, 38, 38, 0.3); background: var(--danger-bg); padding: 20px; border-radius: 16px;">
         <h4 style="color: var(--danger); margin-bottom: 6px; font-size: 16px;">MMMH & MC (Batac City)</h4>
         <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
@@ -642,6 +682,57 @@
           <a target="_blank" rel="noopener" href="https://www.google.com/maps?q=18.060561,120.559439" style="font-size:12px; font-weight:800; text-decoration:none; color: var(--danger); padding:8px 10px; border-radius:999px; border:1px solid rgba(220, 38, 38, 0.35); background: rgba(220, 38, 38, 0.08);">📍 Open Map</a>
         </div>
         <p style="font-size: 13px; color: var(--danger); margin-top: 6px; font-weight: 600;">Brgy. 6 San Julian, Batac City</p>
+      </div>
+
+      <div style="border: 1px solid rgba(245,158,11,0.3); background: #fffbeb; padding: 20px; border-radius: 16px;">
+        <h4 style="color: #d97706; margin-bottom: 6px; font-size: 16px;">Vintar Police Station (PNP)</h4>
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+          <p style="font-weight: 900; font-size: 16px; color: var(--muted); margin:0;">Call 911 or Local Station</p>
+        </div>
+        <p style="font-size: 13px; color: #d97706; margin-top: 6px; font-weight: 600;">Vintar, Ilocos Norte</p>
+      </div>
+
+      <div style="border: 1px solid rgba(239,68,68,0.3); background: var(--danger-bg); padding: 20px; border-radius: 16px;">
+        <h4 style="color: var(--danger); margin-bottom: 6px; font-size: 16px;">Vintar Fire Station (BFP)</h4>
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+          <p style="font-weight: 900; font-size: 16px; color: var(--muted); margin:0;">Call Local BFP Responders</p>
+        </div>
+        <p style="font-size: 13px; color: var(--danger); margin-top: 6px; font-weight: 600;">Vintar, Ilocos Norte</p>
+      </div>
+
+      <div style="border: 1px dashed var(--muted2); background: var(--surface); padding: 20px; border-radius: 16px;">
+        <h4 style="color: var(--text); margin-bottom: 6px; font-size: 16px;">Vintar Rural Health Unit (RHU)</h4>
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+          <p style="font-weight: 900; font-size: 16px; color: var(--muted); margin:0;">Contact Local LGU / BHW Lead</p>
+          <a target="_blank" rel="noopener" href="https://www.google.com/maps?q=18.22923,120.64918" style="font-size:12px; font-weight:800; text-decoration:none; color: var(--muted); padding:8px 10px; border-radius:999px; border:1px solid var(--border); background: var(--surface2);">📍 Open Map</a>
+        </div>
+        <p style="font-size: 13px; color: var(--muted); margin-top: 6px; font-weight: 600;">Vintar, Ilocos Norte</p>
+      </div>
+
+      <div style="border: 1px solid var(--border); background: var(--surface2); padding: 20px; border-radius: 16px;">
+        <h4 style="color: var(--text); margin-bottom: 6px; font-size: 16px;">Laoag City General Hospital</h4>
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+          <a href="tel:0777706523" onclick="return confirmCall('0777706523','Laoag City General Hospital');" style="font-weight: 900; font-size: 20px; color: var(--primary2); text-decoration:none;">(077) 770-6523</a>
+          <a target="_blank" rel="noopener" href="https://www.google.com/maps?q=18.1870813,120.572677" style="font-size:12px; font-weight:800; text-decoration:none; color: var(--muted); padding:8px 10px; border-radius:999px; border:1px solid var(--border); background: var(--surface);">📍 Open Map</a>
+        </div>
+        <p style="font-size: 13px; color: var(--muted); margin-top: 6px; font-weight: 600;">Brgy. 46, San Mateo, Laoag City</p>
+      </div>
+
+      <div style="border: 1px solid var(--border); background: var(--surface2); padding: 20px; border-radius: 16px;">
+        <h4 style="color: var(--text); margin-bottom: 6px; font-size: 16px;">Gov. Roque Ablan Sr. Memorial Hospital</h4>
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+          <a href="tel:0777728826" onclick="return confirmCall('0777728826','Gov. Roque Ablan Sr. Memorial Hospital');" style="font-weight: 900; font-size: 20px; color: var(--primary2); text-decoration:none;">(077) 772-8826</a>
+          <a target="_blank" rel="noopener" href="https://www.google.com/maps?q=18.199167,120.601389" style="font-size:12px; font-weight:800; text-decoration:none; color: var(--muted); padding:8px 10px; border-radius:999px; border:1px solid var(--border); background: var(--surface);">📍 Open Map</a>
+        </div>
+        <p style="font-size: 13px; color: var(--muted); margin-top: 6px; font-weight: 600;">Laoag City</p>
+      </div>
+
+      <div style="border: 1px solid var(--border); background: var(--surface2); padding: 20px; border-radius: 16px;">
+        <h4 style="color: var(--text); margin-bottom: 6px; font-size: 16px;">Bacarra Medical Center</h4>
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+          <p style="font-weight: 900; font-size: 16px; color: var(--muted); margin:0;">Contact Bacarra RHU</p>
+        </div>
+        <p style="font-size: 13px; color: var(--muted); margin-top: 6px; font-weight: 600;">Bacarra, Ilocos Norte</p>
       </div>
 
       <div style="border: 1px solid rgba(16,185,129,0.3); background: var(--success-bg); padding: 20px; border-radius: 16px;">
@@ -653,13 +744,21 @@
         <p style="font-size: 13px; color: var(--success-text); margin-top: 6px; font-weight: 600;">Piddig, Ilocos Norte</p>
       </div>
 
-      <div style="border: 1px dashed var(--muted2); background: var(--surface); padding: 20px; border-radius: 16px;">
-        <h4 style="color: var(--text); margin-bottom: 6px; font-size: 16px;">Vintar Rural Health Unit (RHU)</h4>
+      <div style="border: 1px solid var(--border); background: var(--surface2); padding: 20px; border-radius: 16px;">
+        <h4 style="color: var(--text); margin-bottom: 6px; font-size: 16px;">Dingras District Hospital</h4>
         <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
-          <p style="font-weight: 900; font-size: 16px; color: var(--muted); margin:0;">Contact Local LGU / BHW Lead</p>
-          <a target="_blank" rel="noopener" href="https://www.google.com/maps?q=18.22923,120.64918" style="font-size:12px; font-weight:800; text-decoration:none; color: var(--muted); padding:8px 10px; border-radius:999px; border:1px solid var(--border); background: var(--surface2);">📍 Open Map</a>
+          <p style="font-weight: 900; font-size: 16px; color: var(--muted); margin:0;">Contact Hospital Admin</p>
         </div>
-        <p style="font-size: 13px; color: var(--muted); margin-top: 6px; font-weight: 600;">Vintar, Ilocos Norte</p>
+        <p style="font-size: 13px; color: var(--muted); margin-top: 6px; font-weight: 600;">Dingras, Ilocos Norte</p>
+      </div>
+
+      <div style="border: 1px solid var(--border); background: var(--surface2); padding: 20px; border-radius: 16px;">
+        <h4 style="color: var(--text); margin-bottom: 6px; font-size: 16px;">Bangui District Hospital</h4>
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+          <a href="tel:09284068888" onclick="return confirmCall('09284068888','Bangui District Hospital');" style="font-weight: 900; font-size: 20px; color: var(--primary2); text-decoration:none;">0928-406-8888</a>
+          <a target="_blank" rel="noopener" href="https://www.google.com/maps?q=18.53342,120.76184" style="font-size:12px; font-weight:800; text-decoration:none; color: var(--muted); padding:8px 10px; border-radius:999px; border:1px solid var(--border); background: var(--surface);">📍 Open Map</a>
+        </div>
+        <p style="font-size: 13px; color: var(--muted); margin-top: 6px; font-weight: 600;">Abaca, Bangui</p>
       </div>
     </div>
   </div>
@@ -676,7 +775,6 @@
   </div>
 
   <script>
-    // 🔒 CHART RENDERING
     function renderCharts(p){
       const ctx = document.getElementById(`bpChart-${p.id}`);
       if(!ctx || !p.bp || p.bp.length === 0) return;
@@ -765,7 +863,11 @@
     function fetchCurrentUser() {
         if (!navigator.onLine) {
             const saved = localStorage.getItem('tibok_user');
-            if (saved) { activeUser = JSON.parse(saved); applyUserContext(); return; }
+            if (saved) {
+                activeUser = JSON.parse(saved);
+                applyUserContext();
+                return;
+            }
         }
         
         fetch('/api/me').then(res => res.json()).then(data => {
@@ -821,11 +923,22 @@
         alert("Saved to phone memory! Will sync when internet returns.");
         
         if(action === 'add_patient') {
-            const newP = { ...data, id: data.patientId, visits: [], bp: [] };
-            patients.push(newP);
+            const idx = patients.findIndex(p => p.id === data.patientId);
+            if(idx > -1) { patients[idx] = {...patients[idx], ...data, firstName: data.firstName, lastName: data.lastName}; }
+            else { patients.push({ id: data.patientId, firstName: data.firstName, middleName: data.middleName, lastName: data.lastName, status: data.status, lastUpdated: "Just now", bp: [], visits: []}); }
+        } else if(action === 'log_visit') {
+            const p = patients.find(p => p.id === data.patientId);
+            if(p) {
+                p.bp.push({ date: "Just now", sys: data.sys, dia: data.dia });
+                p.visits.unshift({ date: "Just now", title: data.visitType, avg: `${data.sys}/${data.dia}`, notes: data.notes, assessed_by: activeUser.name });
+                if (data.height) p.height = parseFloat(data.height);
+                if (data.weight) p.weight = parseFloat(data.weight);
+            }
+        } else if(action === 'delete_visit') {
+            const p = patients.find(p => p.id === data.patientId);
+            if(p) { p.visits = p.visits.filter(v => v.date !== data.visitDate); }
         }
-        localStorage.setItem('tibok_patient_data', JSON.stringify(patients));
-        renderDirectory();
+        localStorage.setItem('tibok_patient_data', JSON.stringify(patients)); renderDirectory();
     }
 
     // 🟢 FULL APP REFRESH ON SYNC
@@ -845,7 +958,6 @@
         });
     }
 
-    // 🟢 EXTRACT FORM DATA INCLUDING CHECKBOXES
     function getFormDataWithMeds(formEl) {
         const formData = new FormData(formEl);
         const data = Object.fromEntries(formData.entries());
@@ -872,16 +984,10 @@
       if(navigator.onLine) { fetch('/api/log_visit', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) }).then(() => { loadData(); switchPage('dashboard'); }); } else { saveToQueue('log_visit', data); switchPage('dashboard'); }
     });
 
-    // 🟢 DOWNLOAD PDF FUNCTION
+    // 🟢 FIXED PDF GENERATOR (Uses raw HTML string to prevent blank pages)
     window.downloadPDF = function(pid) {
         const p = patients.find(x => x.id === pid);
         if(!p) return;
-        
-        const content = document.createElement("div");
-        content.style.padding = "40px";
-        content.style.fontFamily = "Helvetica, Arial, sans-serif";
-        content.style.color = "#000";
-        content.style.background = "#fff";
         
         const medsStr = (p.medications && p.medications.length > 0) ? p.medications.join(", ") : "None recorded";
         
@@ -906,36 +1012,38 @@
             </table>`;
         } else { visitsTable = "<p>No clinical visits recorded.</p>"; }
 
-        content.innerHTML = `
-            <div style="text-align:center; border-bottom:2px solid #dc2626; padding-bottom:20px; margin-bottom:20px;">
-                <h1 style="color:#dc2626; margin:0;">TIBOK Health Registry</h1>
-                <p style="margin:5px 0 0 0; color:#555;">Patient Clinical Record</p>
+        const htmlContent = `
+            <div style="padding: 40px; font-family: Helvetica, Arial, sans-serif; color: #000; background: #fff;">
+                <div style="text-align:center; border-bottom:2px solid #dc2626; padding-bottom:20px; margin-bottom:20px;">
+                    <h1 style="color:#dc2626; margin:0;">TIBOK Health Registry</h1>
+                    <p style="margin:5px 0 0 0; color:#555;">Patient Clinical Record</p>
+                </div>
+                <h2 style="margin-bottom:5px;">${p.lastName}, ${p.firstName} ${p.middleName || ''}</h2>
+                <p style="margin:0 0 20px 0; color:#555; font-size:14px;">Patient ID: ${p.id} | Status: ${p.status} | Last Updated: ${p.lastUpdated}</p>
+                
+                <table style="width:100%; border-collapse:collapse; margin-bottom:20px; font-size:14px;">
+                    <tr><td style="padding:10px; border:1px solid #ccc;"><b>Age/Sex:</b> ${p.age} / ${p.sex}</td><td style="padding:10px; border:1px solid #ccc;"><b>Civil Status:</b> ${p.civil}</td></tr>
+                    <tr><td style="padding:10px; border:1px solid #ccc;"><b>Contact:</b> ${p.contact || 'N/A'}</td><td style="padding:10px; border:1px solid #ccc;"><b>Address:</b> Purok ${p.purok}, ${p.homeAddress}</td></tr>
+                    <tr><td style="padding:10px; border:1px solid #ccc; background:#f9fafb;" colspan="2"><b>Height/Weight:</b> ${p.height}cm / ${p.weight}kg</td></tr>
+                    <tr><td style="padding:10px; border:1px solid #ccc; background:#fef2f2; color:#991b1b;" colspan="2"><b>Current Medications:</b> ${medsStr}</td></tr>
+                </table>
+
+                <h3 style="margin-bottom:10px;">General Notes</h3>
+                <p style="border:1px solid #ccc; padding:12px; border-radius:6px; background:#f9f9f9; font-size:14px;">${p.notes || 'None recorded.'}</p>
+
+                <h3 style="margin-top:20px;">Visit History</h3>
+                ${visitsTable}
             </div>
-            <h2 style="margin-bottom:5px;">${p.lastName}, ${p.firstName} ${p.middleName || ''}</h2>
-            <p style="margin:0 0 20px 0; color:#555; font-size:14px;">Patient ID: ${p.id} | Status: ${p.status} | Last Updated: ${p.lastUpdated}</p>
-            
-            <table style="width:100%; border-collapse:collapse; margin-bottom:20px; font-size:14px;">
-                <tr><td style="padding:10px; border:1px solid #ccc;"><b>Age/Sex:</b> ${p.age} / ${p.sex}</td><td style="padding:10px; border:1px solid #ccc;"><b>Civil Status:</b> ${p.civil}</td></tr>
-                <tr><td style="padding:10px; border:1px solid #ccc;"><b>Contact:</b> ${p.contact || 'N/A'}</td><td style="padding:10px; border:1px solid #ccc;"><b>Address:</b> Purok ${p.purok}, ${p.homeAddress}</td></tr>
-                <tr><td style="padding:10px; border:1px solid #ccc; background:#f9fafb;" colspan="2"><b>Height/Weight:</b> ${p.height}cm / ${p.weight}kg</td></tr>
-                <tr><td style="padding:10px; border:1px solid #ccc; background:#fef2f2; color:#991b1b;" colspan="2"><b>Current Medications:</b> ${medsStr}</td></tr>
-            </table>
-
-            <h3 style="margin-bottom:10px;">General Notes</h3>
-            <p style="border:1px solid #ccc; padding:12px; border-radius:6px; background:#f9f9f9; font-size:14px;">${p.notes || 'None recorded.'}</p>
-
-            <h3 style="margin-top:20px;">Visit History</h3>
-            ${visitsTable}
         `;
         
         const opt = {
             margin: 15,
             filename: `TIBOK_Patient_${p.id}_${p.lastName}.pdf`,
             image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 2 },
+            html2canvas: { scale: 2, useCORS: true },
             jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
         };
-        html2pdf().set(opt).from(content).save();
+        html2pdf().set(opt).from(htmlContent).save();
     };
 
     function loadUsers(){
@@ -1087,7 +1195,6 @@
             `;
         }
 
-        // 🟢 MEDICATIONS DISPLAY
         let medsList = (p.medications && p.medications.length > 0) ? p.medications.join(", ") : "None recorded";
         let medsDisplay = `
             <div style="margin-top: 16px; border-top: 1px solid var(--border); padding-top: 16px;">
@@ -1097,7 +1204,7 @@
         `;
         bmiDisplay += medsDisplay;
 
-        // 🟢 CLINICAL PROGRESS REPORT
+        // 🟢 RECALIBRATED CLINICAL PROGRESS REPORT
         let progressReport = "";
         if (p.bp && p.bp.length >= 2) {
             const baseline = p.bp[0];
@@ -1107,8 +1214,11 @@
             
             let trend = "Stable ➡️";
             let tColor = "var(--muted)";
-            if (sysDiff <= -5 || diaDiff <= -5) { trend = "Improving 📉 (BP Dropped)"; tColor = "var(--success-text)"; }
-            if (sysDiff >= 5 || diaDiff >= 5) { trend = "Worsening 📈 (BP Elevated)"; tColor = "var(--danger)"; }
+            
+            if (sysDiff <= -10 || diaDiff <= -10) { trend = "Improved 📉"; tColor = "var(--success-text)"; }
+            else if (sysDiff < 0 || diaDiff < 0) { trend = "Slightly Improved ↘️"; tColor = "var(--success-text)"; }
+            else if (sysDiff >= 15 || diaDiff >= 10) { trend = "Significantly Elevated 📈"; tColor = "var(--danger)"; }
+            else if (sysDiff > 0 || diaDiff > 0) { trend = "Slightly Elevated ↗️"; tColor = "#f59e0b"; /* Amber */ }
 
             progressReport = `
                 <div style="border: 1px solid var(--border); background: var(--surface2); border-radius: 12px; padding: 16px; margin-bottom: 20px;">
@@ -1260,7 +1370,6 @@
                 document.getElementById("visitWeight").value = p.weight || "";
                 document.querySelectorAll(".auto-bhw").forEach(el => el.value = activeUser.name); 
                 
-                // Pre-check existing meds
                 const medArray = p.medications || [];
                 const stdMeds = ["Amlodipine", "Nifedipine", "Felodipine", "Losartan", "Valsartan", "Telmisartan", "Furosemide", "Hydrochlorothiazide", "Spironolactone", "Metoprolol", "Carvedilol", "Propanolol", "Captopril", "Lisinopril", "Enalapril"];
                 document.querySelectorAll('#visitForm input[name="meds"]').forEach(cb => { cb.checked = medArray.includes(cb.value); });
@@ -1281,7 +1390,6 @@
                 document.getElementById("editPurok").value = p.purok || "";
                 document.getElementById("editNotes").value = (p.notes && p.notes !== "None") ? p.notes : "";
                 
-                // Pre-check existing meds
                 const medArray = p.medications || [];
                 const stdMeds = ["Amlodipine", "Nifedipine", "Felodipine", "Losartan", "Valsartan", "Telmisartan", "Furosemide", "Hydrochlorothiazide", "Spironolactone", "Metoprolol", "Carvedilol", "Propanolol", "Captopril", "Lisinopril", "Enalapril"];
                 document.querySelectorAll('#editPatientForm input[name="meds"]').forEach(cb => { cb.checked = medArray.includes(cb.value); });
@@ -1304,26 +1412,38 @@
       
       let items = patients.filter(p => (`${p.firstName} ${p.middleName || ""} ${p.lastName}`).toLowerCase().includes(q) || String(p.id).includes(q));
       
+      // 🟢 4. UI FIX FOR PUROK FOLDERS (Matching Screenshot)
       if (sortOpt === "purok") {
           items.sort((a, b) => (a.purok || "Unknown").localeCompare(b.purok || "Unknown"));
+          
           const groups = {};
           items.forEach(p => {
               const key = p.purok || "Unassigned";
               if(!groups[key]) groups[key] = [];
               groups[key].push(p);
           });
+          
           Object.keys(groups).sort().forEach(groupName => {
               const cluster = document.createElement("details");
               cluster.className = "purok-cluster";
-              cluster.open = true; 
+              
+              // Ensure they start CLOSED for a clean look
+              cluster.open = false; 
               
               const summary = document.createElement("summary");
-              summary.innerHTML = `<span>📂 ${groupName}</span> <span class="pill" style="background:var(--bg);">${groups[groupName].length}</span>`;
+              summary.innerHTML = `
+                <div style="display:flex; align-items:center; gap: 12px;">
+                    <span style="font-size: 22px;">📁</span>
+                    <span style="font-weight: 900; font-size: 18px; color: var(--text);">${groupName}</span>
+                </div>
+                <span class="pill" style="background: var(--bg); border: 1px solid var(--border); font-weight: 800; color: var(--muted); padding: 4px 12px; border-radius: 999px;">${groups[groupName].length}</span>
+              `;
               
               const content = document.createElement("div");
-              content.style.padding = "12px"; content.style.display = "grid"; content.style.gap = "12px";
+              content.className = "cluster-content";
               
               groups[groupName].forEach(p => { content.appendChild(renderPatientCard(p)); });
+              
               cluster.appendChild(summary); cluster.appendChild(content); list.appendChild(cluster);
           });
       } else {
