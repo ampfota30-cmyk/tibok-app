@@ -16,7 +16,7 @@ def serve_apple_icons():
     return app.send_static_file('logo.png')
 
 app.secret_key = "secure_ncd_secret_key_2026"
-app.permanent_session_lifetime = timedelta(days=365) # 🟢 STAY LOGGED IN FOR 1 YEAR
+app.permanent_session_lifetime = timedelta(days=365) # STAY LOGGED IN FOR 1 YEAR
 
 def login_required(f):
     @wraps(f)
@@ -62,7 +62,7 @@ def login():
         
         user = users_col.find_one({"username": username, "password": password})
         if user:
-            session.permanent = True # 🟢 ENABLE PERMANENT SESSION
+            session.permanent = True 
             session['logged_in'] = True
             session['username'] = user['username']
             session['role'] = user['role']
@@ -253,7 +253,14 @@ def add_user():
     data = request.json
     if users_col.find_one({"username": data.get("username")}):
         return jsonify({"status": "error", "message": "Username already exists!"})
-    users_col.insert_one(data)
+    
+    # 🟢 FIX: Explicity assign role to "bhw" on creation
+    users_col.insert_one({
+        "name": data.get("name"),
+        "username": data.get("username"),
+        "password": data.get("password"),
+        "role": "bhw"
+    })
     return jsonify({"status": "success"})
 
 @app.route('/api/delete_user', methods=['POST'])
