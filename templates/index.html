@@ -355,11 +355,11 @@
   </div>
 
   <button class="btn primary" type="button" onclick="manualSync()" title="Force Sync" style="margin-top:10px;">
-    <span class="btn-text">🔄 Sync Data</span>
+    <span class="btn-text">Sync Data</span>
   </button>
 
   <a href="/logout" class="btn" onclick="confirmLogout(event)" style="margin-top:8px; background: var(--danger-bg); color: var(--danger); border-color: transparent;">
-    <span class="btn-text">🚪 Logout</span>
+    <span class="btn-text">Logout</span>
   </a>
 
   <button onclick="openAbout()" style="margin-top:10px; padding:10px 0 0 0; border-top:1px dashed var(--border); background:transparent; border:none; cursor:pointer; width:100%;">
@@ -401,9 +401,9 @@
           
           <div class="sort-wrapper">
               <select id="sortOption" class="sort-select" onchange="renderDirectory()">
-                  <option value="purok" selected>Purok (Grouped View)</option>
-                  <option value="name_asc">Name (A-Z)</option>
-                  <option value="id_newest">ID (Newest First)</option>
+                  <option value="purok" selected>Purok</option>
+                  <option value="name_asc">Name</option>
+                  <option value="id_newest">ID</option>
               </select>
           </div>
 
@@ -430,7 +430,7 @@
                 </div>
             </div>
             
-            <label>Patient ID (Auto-Generated)</label>
+            <label>Patient ID</label>
             <input class="form-input" name="patientId" style="opacity:0.6;" required readonly/>
             
             <div class="grid-2">
@@ -444,8 +444,8 @@
             </div>
             
             <div class="grid-2">
-              <div><label>Height (cm)</label><input class="form-input" name="height" type="number" step="0.1" placeholder="165" required/></div>
-              <div><label>Weight (kg)</label><input class="form-input" name="weight" type="number" step="0.1" placeholder="60" required/></div>
+              <div><label>Height (cm)</label><input class="form-input" name="height" type="number" step="0.1" placeholder="cm" required/></div>
+              <div><label>Weight (kg)</label><input class="form-input" name="weight" type="number" step="0.1" placeholder="kg" required/></div>
             </div>
 
             <div class="grid-2">
@@ -457,7 +457,7 @@
                         <option value="Gabgabur">Gabgabur</option>
                         <option value="Nasualan">Nasualan</option>
                         <option value="Sagsagneb">Sagsagneb</option>
-                        <option value="Namoroc">Namoroc (Centro)</option>
+                        <option value="Namoroc">Namoroc</option>
                     </select>
                 </div>
             </div>
@@ -478,7 +478,7 @@
             
             <div style="display:flex; gap:16px; margin-top:32px; border-top: 1px solid var(--border); padding-top: 24px;">
               <button class="btn" style="flex:1;" type="button" onclick="switchPage('dashboard')">Cancel</button>
-              <button class="btn primary" style="flex:2;" type="submit">💾 Save Patient Record</button>
+              <button class="btn primary" style="flex:2;" type="submit">Save Patient Record</button>
             </div>
           </form>
         </div>
@@ -513,7 +513,7 @@
             
             <div style="display:flex; gap:16px; margin-top:32px; border-top: 1px solid var(--border); padding-top: 24px;">
               <button class="btn" style="flex:1;" type="button" onclick="switchPage('dashboard')">Cancel</button>
-              <button class="btn primary" style="flex:2;" type="submit">💾 Save Visit Data</button>
+              <button class="btn primary" style="flex:2;" type="submit">Save Visit Data</button>
             </div>
           </form>
         </div>
@@ -521,7 +521,7 @@
 
       <section class="page" id="page-edit-patient">
         <div class="card">
-          <div class="cardhead"><h3 id="editFormTitle">🔄 Update Profile</h3></div>
+          <div class="cardhead"><h3 id="editFormTitle">Update Profile</h3></div>
           <form id="editPatientForm" style="padding: 24px;">
             <div class="grid-2">
               <div><label>First name</label><input class="form-input" id="editFirstName" name="firstName" required /></div>
@@ -538,7 +538,7 @@
                 </div>
             </div>
             
-            <label>Patient ID (Locked)</label>
+            <label>Patient ID</label>
             <input class="form-input" id="editPatientId" name="patientId" readonly style="opacity:0.6;"/>
             
             <div class="grid-2">
@@ -560,7 +560,7 @@
                         <option value="Gabgabur">Gabgabur</option>
                         <option value="Nasualan">Nasualan</option>
                         <option value="Sagsagneb">Sagsagneb</option>
-                        <option value="Namoroc">Namoroc (Centro)</option>
+                        <option value="Namoroc">Namoroc</option>
                     </select>
                 </div>
             </div>
@@ -570,7 +570,7 @@
             
             <div style="display:flex; gap:16px; margin-top:32px; border-top: 1px solid var(--border); padding-top: 24px;">
               <button class="btn" style="flex:1;" type="button" onclick="switchPage('dashboard')">Cancel</button>
-              <button class="btn primary" style="flex:2;" type="submit">💾 Save Changes</button>
+              <button class="btn primary" style="flex:2;" type="submit">Save Changes</button>
             </div>
           </form>
         </div>
@@ -612,6 +612,7 @@
     <div style="padding: 24px; display: grid; gap: 16px;">
       <div style="border: 1px solid rgba(220, 38, 38, 0.3); background: var(--danger-bg); padding: 20px; border-radius: 16px;">
         <h4 style="color: var(--danger); margin-bottom: 6px; font-size: 16px;">MMMH & MC (Batac City)</h4>
+
         <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
           <a href="tel:0776008000" onclick="return confirmCall('0776008000','MMMH & MC (Batac City)');" style="font-weight: 900; font-size: 24px; color: var(--text); text-decoration:none;">(077) 600-8000</a>
           <a target="_blank" rel="noopener" href="https://www.google.com/maps?q=18.060561,120.559439" style="font-size:12px; font-weight:800; text-decoration:none; color: var(--danger); padding:8px 10px; border-radius:999px; border:1px solid rgba(220, 38, 38, 0.35); background: rgba(220, 38, 38, 0.08);">📍 Open Map</a>
@@ -678,6 +679,7 @@
   </div>
 
   <script>
+    // 🔒 RE-USING YOUR WORK LOGIC
     function renderCharts(p){
       const ctx = document.getElementById(`bpChart-${p.id}`);
       if(!ctx || !p.bp || p.bp.length === 0) return;
@@ -722,7 +724,7 @@
     function openAbout() { document.getElementById('aboutModal').classList.add('active'); }
     function closeAbout() { document.getElementById('aboutModal').classList.remove('active'); }
 
-    // DYNAMIC CONFIRMATION MODAL LOGIC
+    // 🟢 DYNAMIC CONFIRMATION MODAL LOGIC
     let confirmAction = null;
     function customConfirm(msg, btnText, callback) {
         document.getElementById('confirmMsg').innerText = msg;
