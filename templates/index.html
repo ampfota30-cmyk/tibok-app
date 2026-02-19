@@ -12,7 +12,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
   <script>
     const savedUser = localStorage.getItem('tibok_user');
@@ -243,42 +242,6 @@
      </div>
   </div>
 
-  <div class="modal-overlay" id="exportModal" onclick="if(event.target===this) closeExportModal()">
-    <div class="modal-box" style="text-align: left; max-width: 500px; padding: 32px 24px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-            <h3 style="margin:0; font-weight:900; font-size: 20px;">📥 Export PDF Reports</h3>
-            <button onclick="closeExportModal()" style="background:var(--surface2); border:1px solid var(--border); color:var(--text); width:32px; height:32px; border-radius:8px; cursor:pointer; font-weight:bold;">✕</button>
-        </div>
-
-        <div style="display:flex; flex-direction:column; gap:16px;">
-            <div style="border:1px solid var(--border); padding:20px; border-radius:12px; background:var(--surface2);">
-                <strong style="display:block; margin-bottom:6px; font-size:16px;">1. Master Registry Report</strong>
-                <p style="font-size:13px; color:var(--muted); margin-bottom:16px;">Download a complete clinical summary of ALL registered patients.</p>
-                <button class="btn primary" style="width:100%;" onclick="generateRegistryPDF('all')">Download All Patients</button>
-            </div>
-
-            <div style="border:1px solid var(--border); padding:20px; border-radius:12px; background:var(--surface2);">
-                <strong style="display:block; margin-bottom:6px; font-size:16px;">2. Per Purok Report</strong>
-                <p style="font-size:13px; color:var(--muted); margin-bottom:12px;">Download records for a specific zone.</p>
-                <select id="exportPurokSelect" class="form-input" style="margin-bottom:16px;">
-                    <option value="Gabgabur">Gabgabur</option>
-                    <option value="Nasualan">Nasualan</option>
-                    <option value="Sagsagneb">Sagsagneb</option>
-                    <option value="Namoroc">Namoroc (Centro)</option>
-                </select>
-                <button class="btn primary" style="width:100%;" onclick="generateRegistryPDF('purok')">Download by Purok</button>
-            </div>
-
-            <div style="border:1px solid var(--border); padding:20px; border-radius:12px; background:var(--surface2);">
-                <strong style="display:block; margin-bottom:6px; font-size:16px;">3. Individual Patient Report</strong>
-                <p style="font-size:13px; color:var(--muted); margin-bottom:12px;">Download a specific patient's clinical history.</p>
-                <select id="exportPatientSelect" class="form-input" style="margin-bottom:16px;"></select>
-                <button class="btn primary" style="width:100%;" onclick="generateRegistryPDF('patient')">Download Patient</button>
-            </div>
-        </div>
-    </div>
-  </div>
-
   <div class="modal-overlay" id="aboutModal" onclick="if(event.target===this) closeAbout()">
      <div class="modal-box" style="text-align: center; position:relative;">
          <button onclick="closeAbout()" style="position:absolute; top:16px; right:16px; background:var(--surface2); border:none; width:32px; height:32px; border-radius:8px; display:grid; place-items:center; cursor:pointer; color:var(--text); font-weight:bold;">✕</button>
@@ -382,10 +345,7 @@
             <div style="display:flex; align-items:center; gap:12px;">
                 <h3>Patient Directory</h3><span class="pill" style="background:var(--bg)"><span id="shownCount">0</span> records</span>
             </div>
-            <div style="display:flex; align-items:center; gap:12px; flex-wrap: wrap;">
-                <button class="btn" onclick="openExportModal()" style="padding: 14px 16px;">📥 Export PDF</button>
-                <button id="dashAddPatientBtn" class="btn primary" style="margin:0;">➕ Register Patient</button>
-            </div>
+            <button id="dashAddPatientBtn" class="btn primary">➕ Register New Patient</button>
           </div>
           
           <div class="search-wrapper">
@@ -823,23 +783,6 @@
     function openAbout() { document.getElementById('aboutModal').classList.add('active'); }
     function closeAbout() { document.getElementById('aboutModal').classList.remove('active'); }
 
-    // 🟢 EXPORT MODAL LOGIC
-    function openExportModal() {
-        const pSelect = document.getElementById("exportPatientSelect");
-        pSelect.innerHTML = "";
-        let sortedP = [...patients].sort((a,b) => (a.lastName||"").localeCompare(b.lastName||""));
-        sortedP.forEach(p => {
-            const opt = document.createElement("option");
-            opt.value = p.id;
-            opt.textContent = `${p.lastName}, ${p.firstName} (ID: ${p.id})`;
-            pSelect.appendChild(opt);
-        });
-        document.getElementById("exportModal").classList.add("active");
-    }
-    function closeExportModal() {
-        document.getElementById("exportModal").classList.remove("active");
-    }
-
     let confirmAction = null;
     function customConfirm(msg, btnText, callback) {
         document.getElementById('confirmMsg').innerText = msg;
@@ -998,215 +941,6 @@
       e.preventDefault(); const data = getFormDataWithMeds(e.target);
       if(navigator.onLine) { fetch('/api/log_visit', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) }).then(() => { loadData(); switchPage('dashboard'); }); } else { saveToQueue('log_visit', data); switchPage('dashboard'); }
     });
-
-    // 🟢 100% BULLETPROOF PDF GENERATOR (SERVER-STATE ONLY + NO BLANK PAGES)
-    window.generateRegistryPDF = async function(mode) {
-        // 1. STRICT ONLINE CHECK
-        if (!navigator.onLine) {
-            alert("⚠️ Export Failed: You are offline.\n\nExporting requires an active internet connection to pull the true, up-to-date records directly from the secure database.");
-            return;
-        }
-
-        closeExportModal();
-        alert("Fetching official data from the server. Please wait...");
-
-        try {
-            // 2. FETCH TRUE SERVER STATE (Bypasses localStorage entirely)
-            const response = await fetch('/api/data');
-            const serverPatients = await response.json();
-
-            let targetPatients = [];
-            let reportTitle = "";
-            let filename = "";
-
-            if (mode === 'all') {
-                targetPatients = [...serverPatients];
-                reportTitle = "Comprehensive Master Registry Report";
-                filename = `TIBOK_Master_Registry_${new Date().toISOString().split('T')[0]}.pdf`;
-            } else if (mode === 'purok') {
-                const purok = document.getElementById('exportPurokSelect').value;
-                targetPatients = serverPatients.filter(p => p.purok === purok);
-                reportTitle = `Zone / Purok ${purok} Clinical Report`;
-                filename = `TIBOK_Purok_${purok}_${new Date().toISOString().split('T')[0]}.pdf`;
-            } else if (mode === 'patient') {
-                const pid = document.getElementById('exportPatientSelect').value;
-                targetPatients = serverPatients.filter(p => String(p.id) === String(pid));
-                if(targetPatients.length > 0) {
-                    reportTitle = "Individual Patient Clinical Record";
-                    filename = `TIBOK_Patient_${targetPatients[0].id}_${targetPatients[0].lastName}.pdf`;
-                }
-            }
-
-            if (targetPatients.length === 0) {
-                alert("No patients found for this selection on the server.");
-                return;
-            }
-
-            targetPatients.sort((a, b) => {
-                let pA = a.purok || "";
-                let pB = b.purok || "";
-                if (pA !== pB) return pA.localeCompare(pB);
-                return (a.lastName || "").localeCompare(b.lastName || "");
-            });
-
-            // 3. BUILD THE HTML DOCUMENT
-            let fullHtml = `
-                <div style="font-family: Helvetica, Arial, sans-serif; color: #000; background: #fff; padding: 30px;">
-                    <div style="text-align:center; border-bottom:3px solid #dc2626; padding-bottom:15px; margin-bottom:25px;">
-                        <h1 style="color:#dc2626; margin:0; font-size: 24px; font-weight: 900; letter-spacing: -0.5px;">TIBOK Health Registry</h1>
-                        <p style="margin:5px 0 0 0; color:#64748b; font-size:12px; font-weight: 600; text-transform: uppercase;">${reportTitle}</p>
-                        <p style="margin:5px 0 0 0; color:#64748b; font-size:10px;">Generated: ${new Date().toLocaleString('en-US', {timeZone: 'Asia/Manila'})} • Records: ${targetPatients.length}</p>
-                    </div>
-            `;
-
-            targetPatients.forEach((p, index) => {
-                const medsStr = (p.medications && p.medications.length > 0) ? p.medications.join(", ") : "None recorded";
-                
-                let visitsTable = "";
-                if(p.visits && p.visits.length > 0) {
-                    visitsTable = `
-                    <table style="width:100%; border-collapse:collapse; font-size:11px; margin-top:10px;">
-                        <tr style="background:#dc2626; color:#fff;">
-                            <th style="padding:6px; text-align:left; border:1px solid #b91c1c;">Date</th>
-                            <th style="padding:6px; text-align:left; border:1px solid #b91c1c;">Type</th>
-                            <th style="padding:6px; text-align:left; border:1px solid #b91c1c;">BP</th>
-                            <th style="padding:6px; text-align:left; border:1px solid #b91c1c;">Assessed By</th>
-                            <th style="padding:6px; text-align:left; border:1px solid #b91c1c;">Notes</th>
-                        </tr>
-                        ${p.visits.slice(0, 10).map(v => `
-                            <tr>
-                                <td style="padding:6px; border:1px solid #ccc; white-space:nowrap;">${v.date.split(" ")[0]}</td>
-                                <td style="padding:6px; border:1px solid #ccc;">${v.title}</td>
-                                <td style="padding:6px; border:1px solid #ccc; font-weight:bold; color:#dc2626; white-space:nowrap;">${v.avg}</td>
-                                <td style="padding:6px; border:1px solid #ccc;">${v.assessed_by || 'N/A'}</td>
-                                <td style="padding:6px; border:1px solid #ccc;">${v.notes || 'No notes.'}</td>
-                            </tr>
-                        `).join('')}
-                    </table>`;
-                } else { visitsTable = "<p style='font-size:11px; color:#64748b;'>No clinical visits recorded.</p>"; }
-
-                let bmiDisplay = "N/A";
-                if(p.height > 0 && p.weight > 0) {
-                    let heightM = p.height / 100;
-                    let bmi = (p.weight / (heightM * heightM)).toFixed(1);
-                    bmiDisplay = `${bmi} - H: ${p.height}cm | W: ${p.weight}kg`;
-                }
-
-                let progressReport = "<p style='font-size:11px; color:#64748b;'>Not enough data to calculate trend.</p>";
-                if (p.bp && p.bp.length >= 2) {
-                    const baseline = p.bp[0];
-                    const current = p.bp[p.bp.length - 1];
-                    const sysDiff = current.sys - baseline.sys;
-                    const diaDiff = current.dia - baseline.dia;
-                    
-                    let trend = "Stable ➡️";
-                    let tColor = "#64748b";
-                    if (sysDiff <= -10 || diaDiff <= -10) { trend = "Improved 📉"; tColor = "#10b981"; }
-                    else if (sysDiff < 0 || diaDiff < 0) { trend = "Slightly Improved ↘️"; tColor = "#10b981"; }
-                    else if (sysDiff >= 15 || diaDiff >= 10) { trend = "Significantly Elevated 📈"; tColor = "#ef4444"; }
-                    else if (sysDiff > 0 || diaDiff > 0) { trend = "Slightly Elevated ↗️"; tColor = "#f59e0b"; }
-
-                    progressReport = `
-                        <table style="width:100%; border-collapse:collapse; margin-bottom:10px; font-size:11px; text-align:center;">
-                            <tr>
-                                <td style="padding:6px; border:1px solid #ccc; background:#f8fafc; width: 33%;">
-                                    <div style="color:#64748b; text-transform:uppercase; font-weight:bold;">Baseline (${baseline.date.split(" ")[0]})</div>
-                                    <div style="font-size:14px; font-weight:bold; margin-top:2px;">${baseline.sys} / ${baseline.dia}</div>
-                                </td>
-                                <td style="padding:6px; border:1px solid #ccc; background:#f8fafc; width: 33%;">
-                                    <div style="color:#64748b; text-transform:uppercase; font-weight:bold;">Current (${current.date.split(" ")[0]})</div>
-                                    <div style="font-size:14px; font-weight:bold; margin-top:2px;">${current.sys} / ${current.dia}</div>
-                                </td>
-                                <td style="padding:6px; border:1px solid #ccc; background:#ffffff; width: 33%;">
-                                    <div style="color:#64748b; text-transform:uppercase; font-weight:bold;">Overall Trend</div>
-                                    <div style="font-weight:bold; color:${tColor}; font-size:12px; margin-top:2px;">${trend}</div>
-                                </td>
-                            </tr>
-                        </table>
-                    `;
-                }
-
-                if (index > 0) { fullHtml += `<div class="html2pdf__page-break"></div>`; }
-
-                fullHtml += `
-                    <div style="margin-bottom: 10px;">
-                        <h2 style="margin: 0 0 3px 0; font-size: 18px; font-weight: 900;">${index + 1}. ${p.lastName}, ${p.firstName} ${p.middleName || ''}</h2>
-                        <p style="margin: 0; color: #64748b; font-size: 12px; font-weight: 600;">ID: ${p.id} &nbsp;|&nbsp; Status: ${p.status} &nbsp;|&nbsp; Purok: ${p.purok || 'N/A'}</p>
-                    </div>
-                    
-                    <table style="width:100%; border-collapse:collapse; margin-bottom:15px; font-size:12px;">
-                        <tr>
-                            <td style="padding:6px; border:1px solid #ccc; width:50%;"><b>Age/Sex:</b> ${p.age} / ${p.sex}</td>
-                            <td style="padding:6px; border:1px solid #ccc; width:50%;"><b>Contact:</b> ${p.contact || 'N/A'}</td>
-                        </tr>
-                        <tr>
-                            <td style="padding:6px; border:1px solid #ccc; background:#f8fafc;" colspan="2"><b>BMI & Measurements:</b> ${bmiDisplay}</td>
-                        </tr>
-                        <tr>
-                            <td style="padding:6px; border:1px solid #ccc; background:#fef2f2; color:#991b1b;" colspan="2"><b>Current Medications:</b> ${medsStr}</td>
-                        </tr>
-                        <tr>
-                            <td style="padding:6px; border:1px solid #ccc; background:#f9fafb;" colspan="2"><b>General Notes:</b> ${p.notes || 'None'}</td>
-                        </tr>
-                    </table>
-
-                    <h3 style="font-size: 13px; color: #dc2626; border-bottom: 1px solid #fee2e2; padding-bottom: 3px; margin-bottom: 8px;">Clinical Progress</h3>
-                    ${progressReport}
-
-                    <h3 style="font-size: 13px; color: #dc2626; border-bottom: 1px solid #fee2e2; padding-bottom: 3px; margin-bottom: 8px; margin-top: 15px;">Recent Visit History</h3>
-                    ${visitsTable}
-                `;
-            });
-
-            fullHtml += `</div>`;
-
-            // 4. THE MAGIC FIX: Mount visibly so the browser MUST paint the pixels
-            const container = document.createElement("div");
-            container.id = "pdf-export-container";
-            container.innerHTML = fullHtml;
-            container.style.position = "absolute";
-            container.style.top = "0";
-            container.style.left = "0";
-            container.style.width = "800px"; 
-            container.style.background = "#ffffff";
-            container.style.zIndex = "-1000"; 
-            container.style.opacity = "0"; 
-            container.style.pointerEvents = "none";
-            
-            document.body.appendChild(container);
-
-            // Wait a frame for DOM to update
-            await new Promise(r => requestAnimationFrame(r));
-            await new Promise(r => setTimeout(r, 100)); // tiny safety delay
-
-            const opt = {
-                margin:       [10, 10, 10, 10], 
-                filename:     filename,
-                image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { 
-                    scale: 2, 
-                    useCORS: true,
-                    // Force the clone to be visible during capture
-                    onclone: function(clonedDoc) {
-                        const el = clonedDoc.getElementById('pdf-export-container');
-                        el.style.opacity = "1";
-                        el.style.position = "relative";
-                        el.style.zIndex = "9999";
-                    }
-                },
-                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-            };
-            
-            // 5. Save the PDF, then immediately delete the temporary container
-            html2pdf().set(opt).from(container).save().then(() => {
-                document.body.removeChild(container);
-            });
-
-        } catch (error) {
-            alert("Error fetching data from the server. Please try again.");
-            console.error(error);
-        }
-    };
 
     function loadUsers(){
         fetch('/api/users').then(r=>r.json()).then(data => {
