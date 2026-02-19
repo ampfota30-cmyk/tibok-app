@@ -124,6 +124,7 @@
     details.patient-card > summary { list-style:none; cursor:pointer; padding: 16px; outline: none; background: transparent;}
     details.patient-card > summary::-webkit-details-marker { display:none; }
     
+    /* CLEAN FOLDER UI FOR PUROK CLUSTERS */
     details.purok-cluster { margin-bottom: 12px; border: none; background: transparent; }
     details.purok-cluster > summary { padding: 16px 20px; cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow-sm); transition: 0.2s;}
     details.purok-cluster > summary:hover { box-shadow: var(--shadow); transform: translateY(-1px); }
@@ -687,15 +688,6 @@
         <p style="font-size: 13px; color: var(--danger); margin-top: 6px; font-weight: 600;">Brgy. 6 San Julian, Batac City</p>
       </div>
 
-      <div style="border: 1px dashed var(--muted2); background: var(--surface); padding: 20px; border-radius: 16px;">
-        <h4 style="color: var(--text); margin-bottom: 6px; font-size: 16px;">Vintar Rural Health Unit (RHU)</h4>
-        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
-          <p style="font-weight: 900; font-size: 16px; color: var(--muted); margin:0;">Contact Local LGU / BHW Lead</p>
-          <a target="_blank" rel="noopener" href="https://www.google.com/maps?q=18.22923,120.64918" style="font-size:12px; font-weight:800; text-decoration:none; color: var(--muted); padding:8px 10px; border-radius:999px; border:1px solid var(--border); background: var(--surface2);">📍 Open Map</a>
-        </div>
-        <p style="font-size: 13px; color: var(--muted); margin-top: 6px; font-weight: 600;">Vintar, Ilocos Norte</p>
-      </div>
-
       <div style="border: 1px solid rgba(245,158,11,0.3); background: #fffbeb; padding: 20px; border-radius: 16px;">
         <h4 style="color: #d97706; margin-bottom: 6px; font-size: 16px;">Vintar Police Station (PNP)</h4>
         <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
@@ -719,6 +711,15 @@
           <a target="_blank" rel="noopener" href="https://www.google.com/maps?q=18.166667,120.716667" style="font-size:12px; font-weight:800; text-decoration:none; color: var(--success-text); padding:8px 10px; border-radius:999px; border:1px solid rgba(16,185,129,0.35); background: rgba(16,185,129,0.08);">📍 Open Map</a>
         </div>
         <p style="font-size: 13px; color: var(--success-text); margin-top: 6px; font-weight: 600;">Piddig, Ilocos Norte</p>
+      </div>
+
+      <div style="border: 1px dashed var(--muted2); background: var(--surface); padding: 20px; border-radius: 16px;">
+        <h4 style="color: var(--text); margin-bottom: 6px; font-size: 16px;">Vintar Rural Health Unit (RHU)</h4>
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+          <p style="font-weight: 900; font-size: 16px; color: var(--muted); margin:0;">Contact Local LGU / BHW Lead</p>
+          <a target="_blank" rel="noopener" href="https://www.google.com/maps?q=18.22923,120.64918" style="font-size:12px; font-weight:800; text-decoration:none; color: var(--muted); padding:8px 10px; border-radius:999px; border:1px solid var(--border); background: var(--surface2);">📍 Open Map</a>
+        </div>
+        <p style="font-size: 13px; color: var(--muted); margin-top: 6px; font-weight: 600;">Vintar, Ilocos Norte</p>
       </div>
 
       <div style="border: 1px solid var(--border); background: var(--surface2); padding: 20px; border-radius: 16px;">
@@ -998,184 +999,213 @@
       if(navigator.onLine) { fetch('/api/log_visit', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) }).then(() => { loadData(); switchPage('dashboard'); }); } else { saveToQueue('log_visit', data); switchPage('dashboard'); }
     });
 
-    // 🟢 NEW UNIVERSAL PDF GENERATOR
+    // 🟢 100% BULLETPROOF PDF GENERATOR (SERVER-STATE ONLY + NO BLANK PAGES)
     window.generateRegistryPDF = async function(mode) {
-        let targetPatients = [];
-        let reportTitle = "";
-        let filename = "";
-
-        if (mode === 'all') {
-            targetPatients = [...patients];
-            reportTitle = "Comprehensive Master Registry Report";
-            filename = `TIBOK_Master_Registry_${new Date().toISOString().split('T')[0]}.pdf`;
-        } else if (mode === 'purok') {
-            const purok = document.getElementById('exportPurokSelect').value;
-            targetPatients = patients.filter(p => p.purok === purok);
-            reportTitle = `Zone / Purok ${purok} Clinical Report`;
-            filename = `TIBOK_Purok_${purok}_${new Date().toISOString().split('T')[0]}.pdf`;
-        } else if (mode === 'patient') {
-            const pid = document.getElementById('exportPatientSelect').value;
-            targetPatients = patients.filter(p => p.id === pid);
-            if(targetPatients.length > 0) {
-                reportTitle = "Individual Patient Clinical Record";
-                filename = `TIBOK_Patient_${targetPatients[0].id}_${targetPatients[0].lastName}.pdf`;
-            }
-        }
-
-        if (targetPatients.length === 0) {
-            alert("No patients found for this selection.");
+        // 1. STRICT ONLINE CHECK
+        if (!navigator.onLine) {
+            alert("⚠️ Export Failed: You are offline.\n\nExporting requires an active internet connection to pull the true, up-to-date records directly from the secure database.");
             return;
         }
 
         closeExportModal();
-        alert("Generating PDF Report. This may take a few seconds...");
+        alert("Fetching official data from the server. Please wait...");
 
-        // Sort safety
-        targetPatients.sort((a, b) => {
-            let pA = a.purok || "";
-            let pB = b.purok || "";
-            if (pA !== pB) return pA.localeCompare(pB);
-            return (a.lastName || "").localeCompare(b.lastName || "");
-        });
+        try {
+            // 2. FETCH TRUE SERVER STATE (Bypasses localStorage entirely)
+            const response = await fetch('/api/data');
+            const serverPatients = await response.json();
 
-        let fullHtml = `
-            <div style="padding: 20px; font-family: Helvetica, Arial, sans-serif; color: #0f172a; background: #fff;">
-                <div style="text-align:center; border-bottom:3px solid #dc2626; padding-bottom:15px; margin-bottom:25px;">
-                    <h1 style="color:#dc2626; margin:0; font-size: 28px; font-weight: 900; letter-spacing: -0.5px;">TIBOK Health Registry</h1>
-                    <p style="margin:5px 0 0 0; color:#64748b; font-size:14px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">${reportTitle}</p>
-                    <p style="margin:5px 0 0 0; color:#64748b; font-size:12px;">Generated: ${new Date().toLocaleString('en-US', {timeZone: 'Asia/Manila'})}</p>
-                </div>
-        `;
+            let targetPatients = [];
+            let reportTitle = "";
+            let filename = "";
 
-        targetPatients.forEach((p, index) => {
-            const medsStr = (p.medications && p.medications.length > 0) ? p.medications.join(", ") : "None recorded";
-            
-            let visitsTable = "";
-            if(p.visits && p.visits.length > 0) {
-                visitsTable = `
-                <table style="width:100%; border-collapse:collapse; font-size:12px; margin-top:10px;">
-                    <tr style="background:#dc2626; color:#fff;">
-                        <th style="padding:8px; text-align:left; border:1px solid #b91c1c;">Date</th>
-                        <th style="padding:8px; text-align:left; border:1px solid #b91c1c;">Type</th>
-                        <th style="padding:8px; text-align:left; border:1px solid #b91c1c;">BP</th>
-                        <th style="padding:8px; text-align:left; border:1px solid #b91c1c;">Assessed By</th>
-                        <th style="padding:8px; text-align:left; border:1px solid #b91c1c;">Notes</th>
-                    </tr>
-                    ${p.visits.slice(0, 10).map(v => `
-                        <tr style="background:#fff; color:#0f172a;">
-                            <td style="padding:8px; border:1px solid #e2e8f0; white-space:nowrap;">${v.date.split(" ")[0]}</td>
-                            <td style="padding:8px; border:1px solid #e2e8f0;">${v.title}</td>
-                            <td style="padding:8px; border:1px solid #e2e8f0; font-weight:bold; color:#dc2626; white-space:nowrap;">${v.avg}</td>
-                            <td style="padding:8px; border:1px solid #e2e8f0;">${v.assessed_by || 'N/A'}</td>
-                            <td style="padding:8px; border:1px solid #e2e8f0;">${v.notes || 'No notes.'}</td>
-                        </tr>
-                    `).join('')}
-                </table>`;
-            } else { visitsTable = "<p style='font-size:12px; color:#64748b;'>No clinical visits recorded.</p>"; }
-
-            let bmiDisplay = "N/A";
-            if(p.height > 0 && p.weight > 0) {
-                let heightM = p.height / 100;
-                let bmi = (p.weight / (heightM * heightM)).toFixed(1);
-                bmiDisplay = `${bmi} - H: ${p.height}cm | W: ${p.weight}kg`;
+            if (mode === 'all') {
+                targetPatients = [...serverPatients];
+                reportTitle = "Comprehensive Master Registry Report";
+                filename = `TIBOK_Master_Registry_${new Date().toISOString().split('T')[0]}.pdf`;
+            } else if (mode === 'purok') {
+                const purok = document.getElementById('exportPurokSelect').value;
+                targetPatients = serverPatients.filter(p => p.purok === purok);
+                reportTitle = `Zone / Purok ${purok} Clinical Report`;
+                filename = `TIBOK_Purok_${purok}_${new Date().toISOString().split('T')[0]}.pdf`;
+            } else if (mode === 'patient') {
+                const pid = document.getElementById('exportPatientSelect').value;
+                targetPatients = serverPatients.filter(p => String(p.id) === String(pid));
+                if(targetPatients.length > 0) {
+                    reportTitle = "Individual Patient Clinical Record";
+                    filename = `TIBOK_Patient_${targetPatients[0].id}_${targetPatients[0].lastName}.pdf`;
+                }
             }
 
-            let progressReport = "<p style='font-size:12px; color:#64748b;'>Not enough data to calculate trend.</p>";
-            if (p.bp && p.bp.length >= 2) {
-                const baseline = p.bp[0];
-                const current = p.bp[p.bp.length - 1];
-                const sysDiff = current.sys - baseline.sys;
-                const diaDiff = current.dia - baseline.dia;
-                
-                let trend = "Stable ➡️";
-                let tColor = "#64748b";
-                if (sysDiff <= -10 || diaDiff <= -10) { trend = "Improved 📉"; tColor = "#10b981"; }
-                else if (sysDiff < 0 || diaDiff < 0) { trend = "Slightly Improved ↘️"; tColor = "#10b981"; }
-                else if (sysDiff >= 15 || diaDiff >= 10) { trend = "Significantly Elevated 📈"; tColor = "#ef4444"; }
-                else if (sysDiff > 0 || diaDiff > 0) { trend = "Slightly Elevated ↗️"; tColor = "#f59e0b"; }
+            if (targetPatients.length === 0) {
+                alert("No patients found for this selection on the server.");
+                return;
+            }
 
-                progressReport = `
-                    <table style="width:100%; border-collapse:collapse; margin-bottom:10px; font-size:12px; text-align:center;">
+            targetPatients.sort((a, b) => {
+                let pA = a.purok || "";
+                let pB = b.purok || "";
+                if (pA !== pB) return pA.localeCompare(pB);
+                return (a.lastName || "").localeCompare(b.lastName || "");
+            });
+
+            // 3. BUILD THE HTML DOCUMENT
+            let fullHtml = `
+                <div style="font-family: Helvetica, Arial, sans-serif; color: #000; background: #fff; padding: 30px;">
+                    <div style="text-align:center; border-bottom:3px solid #dc2626; padding-bottom:15px; margin-bottom:25px;">
+                        <h1 style="color:#dc2626; margin:0; font-size: 24px; font-weight: 900; letter-spacing: -0.5px;">TIBOK Health Registry</h1>
+                        <p style="margin:5px 0 0 0; color:#64748b; font-size:12px; font-weight: 600; text-transform: uppercase;">${reportTitle}</p>
+                        <p style="margin:5px 0 0 0; color:#64748b; font-size:10px;">Generated: ${new Date().toLocaleString('en-US', {timeZone: 'Asia/Manila'})} • Records: ${targetPatients.length}</p>
+                    </div>
+            `;
+
+            targetPatients.forEach((p, index) => {
+                const medsStr = (p.medications && p.medications.length > 0) ? p.medications.join(", ") : "None recorded";
+                
+                let visitsTable = "";
+                if(p.visits && p.visits.length > 0) {
+                    visitsTable = `
+                    <table style="width:100%; border-collapse:collapse; font-size:11px; margin-top:10px;">
+                        <tr style="background:#dc2626; color:#fff;">
+                            <th style="padding:6px; text-align:left; border:1px solid #b91c1c;">Date</th>
+                            <th style="padding:6px; text-align:left; border:1px solid #b91c1c;">Type</th>
+                            <th style="padding:6px; text-align:left; border:1px solid #b91c1c;">BP</th>
+                            <th style="padding:6px; text-align:left; border:1px solid #b91c1c;">Assessed By</th>
+                            <th style="padding:6px; text-align:left; border:1px solid #b91c1c;">Notes</th>
+                        </tr>
+                        ${p.visits.slice(0, 10).map(v => `
+                            <tr>
+                                <td style="padding:6px; border:1px solid #ccc; white-space:nowrap;">${v.date.split(" ")[0]}</td>
+                                <td style="padding:6px; border:1px solid #ccc;">${v.title}</td>
+                                <td style="padding:6px; border:1px solid #ccc; font-weight:bold; color:#dc2626; white-space:nowrap;">${v.avg}</td>
+                                <td style="padding:6px; border:1px solid #ccc;">${v.assessed_by || 'N/A'}</td>
+                                <td style="padding:6px; border:1px solid #ccc;">${v.notes || 'No notes.'}</td>
+                            </tr>
+                        `).join('')}
+                    </table>`;
+                } else { visitsTable = "<p style='font-size:11px; color:#64748b;'>No clinical visits recorded.</p>"; }
+
+                let bmiDisplay = "N/A";
+                if(p.height > 0 && p.weight > 0) {
+                    let heightM = p.height / 100;
+                    let bmi = (p.weight / (heightM * heightM)).toFixed(1);
+                    bmiDisplay = `${bmi} - H: ${p.height}cm | W: ${p.weight}kg`;
+                }
+
+                let progressReport = "<p style='font-size:11px; color:#64748b;'>Not enough data to calculate trend.</p>";
+                if (p.bp && p.bp.length >= 2) {
+                    const baseline = p.bp[0];
+                    const current = p.bp[p.bp.length - 1];
+                    const sysDiff = current.sys - baseline.sys;
+                    const diaDiff = current.dia - baseline.dia;
+                    
+                    let trend = "Stable ➡️";
+                    let tColor = "#64748b";
+                    if (sysDiff <= -10 || diaDiff <= -10) { trend = "Improved 📉"; tColor = "#10b981"; }
+                    else if (sysDiff < 0 || diaDiff < 0) { trend = "Slightly Improved ↘️"; tColor = "#10b981"; }
+                    else if (sysDiff >= 15 || diaDiff >= 10) { trend = "Significantly Elevated 📈"; tColor = "#ef4444"; }
+                    else if (sysDiff > 0 || diaDiff > 0) { trend = "Slightly Elevated ↗️"; tColor = "#f59e0b"; }
+
+                    progressReport = `
+                        <table style="width:100%; border-collapse:collapse; margin-bottom:10px; font-size:11px; text-align:center;">
+                            <tr>
+                                <td style="padding:6px; border:1px solid #ccc; background:#f8fafc; width: 33%;">
+                                    <div style="color:#64748b; text-transform:uppercase; font-weight:bold;">Baseline (${baseline.date.split(" ")[0]})</div>
+                                    <div style="font-size:14px; font-weight:bold; margin-top:2px;">${baseline.sys} / ${baseline.dia}</div>
+                                </td>
+                                <td style="padding:6px; border:1px solid #ccc; background:#f8fafc; width: 33%;">
+                                    <div style="color:#64748b; text-transform:uppercase; font-weight:bold;">Current (${current.date.split(" ")[0]})</div>
+                                    <div style="font-size:14px; font-weight:bold; margin-top:2px;">${current.sys} / ${current.dia}</div>
+                                </td>
+                                <td style="padding:6px; border:1px solid #ccc; background:#ffffff; width: 33%;">
+                                    <div style="color:#64748b; text-transform:uppercase; font-weight:bold;">Overall Trend</div>
+                                    <div style="font-weight:bold; color:${tColor}; font-size:12px; margin-top:2px;">${trend}</div>
+                                </td>
+                            </tr>
+                        </table>
+                    `;
+                }
+
+                if (index > 0) { fullHtml += `<div class="html2pdf__page-break"></div>`; }
+
+                fullHtml += `
+                    <div style="margin-bottom: 10px;">
+                        <h2 style="margin: 0 0 3px 0; font-size: 18px; font-weight: 900;">${index + 1}. ${p.lastName}, ${p.firstName} ${p.middleName || ''}</h2>
+                        <p style="margin: 0; color: #64748b; font-size: 12px; font-weight: 600;">ID: ${p.id} &nbsp;|&nbsp; Status: ${p.status} &nbsp;|&nbsp; Purok: ${p.purok || 'N/A'}</p>
+                    </div>
+                    
+                    <table style="width:100%; border-collapse:collapse; margin-bottom:15px; font-size:12px;">
                         <tr>
-                            <td style="padding:8px; border:1px solid #e2e8f0; background:#f8fafc; width: 33%;">
-                                <div style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:bold;">Baseline (${baseline.date.split(" ")[0]})</div>
-                                <div style="font-size:15px; font-weight:bold; color:#0f172a; margin-top:4px;">${baseline.sys} / ${baseline.dia}</div>
-                            </td>
-                            <td style="padding:8px; border:1px solid #e2e8f0; background:#f8fafc; width: 33%;">
-                                <div style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:bold;">Current (${current.date.split(" ")[0]})</div>
-                                <div style="font-size:15px; font-weight:bold; color:#0f172a; margin-top:4px;">${current.sys} / ${current.dia}</div>
-                            </td>
-                            <td style="padding:8px; border:1px solid #e2e8f0; background:#ffffff; width: 33%;">
-                                <div style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:bold;">Overall Trend</div>
-                                <div style="font-weight:bold; color:${tColor}; font-size:14px; margin-top:4px;">${trend}</div>
-                            </td>
+                            <td style="padding:6px; border:1px solid #ccc; width:50%;"><b>Age/Sex:</b> ${p.age} / ${p.sex}</td>
+                            <td style="padding:6px; border:1px solid #ccc; width:50%;"><b>Contact:</b> ${p.contact || 'N/A'}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding:6px; border:1px solid #ccc; background:#f8fafc;" colspan="2"><b>BMI & Measurements:</b> ${bmiDisplay}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding:6px; border:1px solid #ccc; background:#fef2f2; color:#991b1b;" colspan="2"><b>Current Medications:</b> ${medsStr}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding:6px; border:1px solid #ccc; background:#f9fafb;" colspan="2"><b>General Notes:</b> ${p.notes || 'None'}</td>
                         </tr>
                     </table>
+
+                    <h3 style="font-size: 13px; color: #dc2626; border-bottom: 1px solid #fee2e2; padding-bottom: 3px; margin-bottom: 8px;">Clinical Progress</h3>
+                    ${progressReport}
+
+                    <h3 style="font-size: 13px; color: #dc2626; border-bottom: 1px solid #fee2e2; padding-bottom: 3px; margin-bottom: 8px; margin-top: 15px;">Recent Visit History</h3>
+                    ${visitsTable}
                 `;
-            }
+            });
 
-            if (index > 0) { fullHtml += `<div style="page-break-before: always; margin-top: 30px;"></div>`; }
+            fullHtml += `</div>`;
 
-            fullHtml += `
-                <div style="margin-bottom: 15px;">
-                    <h2 style="margin: 0 0 5px 0; font-size: 20px; font-weight: 900; color: #0f172a;">${p.lastName}, ${p.firstName} ${p.middleName || ''}</h2>
-                    <p style="margin: 0; color: #64748b; font-size: 13px; font-weight: 600;">ID: ${p.id} &nbsp;|&nbsp; Status: ${p.status} &nbsp;|&nbsp; Purok: ${p.purok || 'N/A'}</p>
-                </div>
-                
-                <table style="width:100%; border-collapse:collapse; margin-bottom:15px; font-size:13px;">
-                    <tr>
-                        <td style="padding:8px; border:1px solid #e2e8f0; width:50%;"><b>Age/Sex:</b> ${p.age} / ${p.sex}</td>
-                        <td style="padding:8px; border:1px solid #e2e8f0; width:50%;"><b>Contact:</b> ${p.contact || 'N/A'}</td>
-                    </tr>
-                    <tr>
-                        <td style="padding:8px; border:1px solid #e2e8f0; background:#f8fafc;" colspan="2"><b>BMI & Measurements:</b> ${bmiDisplay}</td>
-                    </tr>
-                    <tr>
-                        <td style="padding:8px; border:1px solid #e2e8f0; background:#fef2f2; color:#991b1b;" colspan="2"><b>Current Medications:</b> ${medsStr}</td>
-                    </tr>
-                    <tr>
-                        <td style="padding:8px; border:1px solid #e2e8f0; background:#f9fafb;" colspan="2"><b>General Notes:</b> ${p.notes || 'None'}</td>
-                    </tr>
-                </table>
+            // 4. THE MAGIC FIX: Mount visibly so the browser MUST paint the pixels
+            const container = document.createElement("div");
+            container.id = "pdf-export-container";
+            container.innerHTML = fullHtml;
+            container.style.position = "absolute";
+            container.style.top = "0";
+            container.style.left = "0";
+            container.style.width = "800px"; 
+            container.style.background = "#ffffff";
+            container.style.zIndex = "-1000"; 
+            container.style.opacity = "0"; 
+            container.style.pointerEvents = "none";
+            
+            document.body.appendChild(container);
 
-                <h3 style="font-size: 14px; color: #dc2626; border-bottom: 1px solid #fee2e2; padding-bottom: 4px; margin-bottom: 10px;">Clinical Progress</h3>
-                ${progressReport}
+            // Wait a frame for DOM to update
+            await new Promise(r => requestAnimationFrame(r));
+            await new Promise(r => setTimeout(r, 100)); // tiny safety delay
 
-                <h3 style="font-size: 14px; color: #dc2626; border-bottom: 1px solid #fee2e2; padding-bottom: 4px; margin-bottom: 10px; margin-top: 15px;">Visit History</h3>
-                ${visitsTable}
-            `;
-        });
+            const opt = {
+                margin:       [10, 10, 10, 10], 
+                filename:     filename,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { 
+                    scale: 2, 
+                    useCORS: true,
+                    // Force the clone to be visible during capture
+                    onclone: function(clonedDoc) {
+                        const el = clonedDoc.getElementById('pdf-export-container');
+                        el.style.opacity = "1";
+                        el.style.position = "relative";
+                        el.style.zIndex = "9999";
+                    }
+                },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+            
+            // 5. Save the PDF, then immediately delete the temporary container
+            html2pdf().set(opt).from(container).save().then(() => {
+                document.body.removeChild(container);
+            });
 
-        fullHtml += `</div>`;
-
-        // 🟢 FIX: Keep element in DOM but hidden to ensure library reads it correctly
-        const element = document.createElement("div");
-        element.style.position = "fixed";
-        element.style.left = "0";
-        element.style.top = "0";
-        element.style.opacity = "0";
-        element.style.pointerEvents = "none";
-        element.style.zIndex = "-1";
-        element.style.width = "800px"; 
-        element.style.background = "#ffffff";
-        element.innerHTML = fullHtml;
-
-        document.body.appendChild(element);
-
-        // Wait 1 frame to ensure DOM recognizes the CSS
-        await new Promise(r => requestAnimationFrame(r));
-
-        const opt = {
-            margin:       [10, 10, 10, 10], 
-            filename:     filename,
-            image:        { type: 'jpeg', quality: 0.98 },
-            html2canvas:  { scale: 2, useCORS: true, logging: false },
-            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-        };
-        
-        html2pdf().set(opt).from(element).save().then(() => {
-            document.body.removeChild(element);
-        });
+        } catch (error) {
+            alert("Error fetching data from the server. Please try again.");
+            console.error(error);
+        }
     };
 
     function loadUsers(){
@@ -1336,7 +1366,6 @@
         `;
         bmiDisplay += medsDisplay;
 
-        // 🟢 RECALIBRATED CLINICAL PROGRESS REPORT
         let progressReport = "";
         if (p.bp && p.bp.length >= 2) {
             const baseline = p.bp[0];
@@ -1557,7 +1586,7 @@
               const cluster = document.createElement("details");
               cluster.className = "purok-cluster";
               
-              // 🟢 FOLDER ALWAYS STARTS CLOSED 
+              // FOLDER ALWAYS STARTS CLOSED 
               cluster.open = false; 
               
               const summary = document.createElement("summary");
