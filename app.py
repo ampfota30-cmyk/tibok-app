@@ -1,10 +1,13 @@
 from flask import Flask, render_template, request, jsonify, send_from_directory, session, redirect, url_for
 from functools import wraps
 import pymongo
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import os
 
 app = Flask(__name__)
+
+# --- PHT TIMEZONE DEFINITION ---
+PHT = timezone(timedelta(hours=8))
 
 # --- FIX FOR APPLE & ANDROID ICONS ---
 @app.route('/favicon.ico')
@@ -16,7 +19,7 @@ def serve_apple_icons():
     return app.send_static_file('logo.png')
 
 app.secret_key = "secure_ncd_secret_key_2026"
-app.permanent_session_lifetime = timedelta(days=365) # STAY LOGGED IN FOR 1 YEAR
+app.permanent_session_lifetime = timedelta(days=365) 
 
 def login_required(f):
     @wraps(f)
@@ -152,6 +155,7 @@ def get_data():
             "contact": p.get("contact_number", ""), 
             "status": p.get("status", "Active"),
             "notes": p.get("notes", ""), 
+            "medications": p.get("medications", []), # 🟢 Added medications array
             "bp": bp_list, 
             "visits": visit_list,
             "lastUpdated": p.get("last_updated", (p_visits[0].get("visit_date", "New") if p_visits else "New"))
@@ -163,7 +167,7 @@ def get_data():
 def add_patient():
     data = request.json
     pid = data.get("patientId")
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+    timestamp = datetime.now(PHT).strftime("%Y-%m-%d %I:%M %p") # 🟢 Accurate PHT Format
     notes = data.get("notes", "")
 
     new_doc = {
@@ -182,6 +186,7 @@ def add_patient():
         "weight": float(data.get("weight", 0) or 0),
         "contact_number": data.get("contact"), 
         "notes": notes, 
+        "medications": data.get("medications", []), # 🟢 Save Meds array
         "last_updated": timestamp
     }
     patients_col.update_one({"patient_id": pid}, {"$set": new_doc}, upsert=True)
@@ -204,7 +209,7 @@ def log_visit():
     data = request.json
     pid = data.get("patientId")
     sys_val, dia_val = data.get("sys"), data.get("dia")
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+    timestamp = datetime.now(PHT).strftime("%Y-%m-%d %I:%M %p") # 🟢 Accurate PHT Format
 
     new_visit = {
         "patient_id": pid, 
@@ -219,6 +224,7 @@ def log_visit():
     update_fields = {"last_updated": timestamp}
     if data.get("height"): update_fields["height"] = float(data.get("height"))
     if data.get("weight"): update_fields["weight"] = float(data.get("weight"))
+    if "medications" in data: update_fields["medications"] = data.get("medications") # 🟢 Update meds on visit
         
     patients_col.update_one({"patient_id": pid}, {"$set": update_fields})
     return jsonify({"status": "success"})
@@ -254,7 +260,6 @@ def add_user():
     if users_col.find_one({"username": data.get("username")}):
         return jsonify({"status": "error", "message": "Username already exists!"})
     
-    # 🟢 FIX: Explicity assign role to "bhw" on creation
     users_col.insert_one({
         "name": data.get("name"),
         "username": data.get("username"),
