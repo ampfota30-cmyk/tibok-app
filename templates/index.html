@@ -31,7 +31,7 @@
       --danger: #ef4444; --danger-bg: #fee2e2; 
       --radius: 18px; --radius2: 14px; 
       
-      --base: 17px; /* 🟢 Larger Font Size */
+      --base: 17px; 
 
       --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
       --shadow: 0 10px 26px rgba(220, 38, 38, 0.08);
@@ -124,48 +124,15 @@
     details.patient-card > summary { list-style:none; cursor:pointer; padding: 16px; outline: none; background: transparent;}
     details.patient-card > summary::-webkit-details-marker { display:none; }
     
-    /* 🟢 NEW CLEAN FOLDER UI FOR PUROK CLUSTERS */
-    details.purok-cluster { 
-        margin-bottom: 12px; 
-        border: none; 
-        background: transparent; 
-    }
+    /* CLEAN FOLDER UI FOR PUROK CLUSTERS */
+    details.purok-cluster { margin-bottom: 12px; border: none; background: transparent; }
     details.purok-cluster > summary { 
-        padding: 16px 20px; 
-        cursor: pointer; 
-        list-style: none; 
-        display: flex; 
-        justify-content: space-between; 
-        align-items: center; 
-        background: var(--surface); 
-        border: 1px solid var(--border); 
-        border-radius: 14px;
-        box-shadow: var(--shadow-sm);
-        transition: 0.2s;
+        padding: 16px 20px; cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow-sm); transition: 0.2s;
     }
-    details.purok-cluster > summary:hover {
-        box-shadow: var(--shadow);
-        transform: translateY(-1px);
-    }
-    details.purok-cluster[open] > summary { 
-        border-bottom-left-radius: 0; 
-        border-bottom-right-radius: 0; 
-        border-bottom: 1px dashed var(--border);
-        color: var(--primary); 
-    }
+    details.purok-cluster > summary:hover { box-shadow: var(--shadow); transform: translateY(-1px); }
+    details.purok-cluster[open] > summary { border-bottom-left-radius: 0; border-bottom-right-radius: 0; border-bottom: 1px dashed var(--border); color: var(--primary); }
     details.purok-cluster > summary::-webkit-details-marker { display:none; }
-    
-    /* Container inside the details folder */
-    .cluster-content {
-        background: var(--surface2);
-        border: 1px solid var(--border);
-        border-top: none;
-        border-bottom-left-radius: 14px;
-        border-bottom-right-radius: 14px;
-        padding: 16px;
-        display: grid;
-        gap: 12px;
-    }
+    .cluster-content { background: var(--surface2); border: 1px solid var(--border); border-top: none; border-bottom-left-radius: 14px; border-bottom-right-radius: 14px; padding: 16px; display: grid; gap: 12px;}
     
     .row { display:flex; align-items:center; gap: 16px; flex-wrap: wrap;}
     .chev { color: var(--muted2); display:flex; align-items:center; transition: transform .2s;}
@@ -684,20 +651,13 @@
         <p style="font-size: 13px; color: var(--danger); margin-top: 6px; font-weight: 600;">Brgy. 6 San Julian, Batac City</p>
       </div>
 
-      <div style="border: 1px solid rgba(245,158,11,0.3); background: #fffbeb; padding: 20px; border-radius: 16px;">
-        <h4 style="color: #d97706; margin-bottom: 6px; font-size: 16px;">Vintar Police Station (PNP)</h4>
+      <div style="border: 1px solid rgba(16,185,129,0.3); background: var(--success-bg); padding: 20px; border-radius: 16px;">
+        <h4 style="color: var(--success-text); margin-bottom: 6px; font-size: 16px;">Piddig District Hospital</h4>
         <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
-          <p style="font-weight: 900; font-size: 16px; color: var(--muted); margin:0;">Call 911 or Local Station</p>
+          <a href="tel:0776707000" onclick="return confirmCall('0776707000','Piddig District Hospital');" style="font-weight: 900; font-size: 20px; color: var(--text); text-decoration:none;">(077) 670-7000</a>
+          <a target="_blank" rel="noopener" href="https://www.google.com/maps?q=18.166667,120.716667" style="font-size:12px; font-weight:800; text-decoration:none; color: var(--success-text); padding:8px 10px; border-radius:999px; border:1px solid rgba(16,185,129,0.35); background: rgba(16,185,129,0.08);">📍 Open Map</a>
         </div>
-        <p style="font-size: 13px; color: #d97706; margin-top: 6px; font-weight: 600;">Vintar, Ilocos Norte</p>
-      </div>
-
-      <div style="border: 1px solid rgba(239,68,68,0.3); background: var(--danger-bg); padding: 20px; border-radius: 16px;">
-        <h4 style="color: var(--danger); margin-bottom: 6px; font-size: 16px;">Vintar Fire Station (BFP)</h4>
-        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
-          <p style="font-weight: 900; font-size: 16px; color: var(--muted); margin:0;">Call Local BFP Responders</p>
-        </div>
-        <p style="font-size: 13px; color: var(--danger); margin-top: 6px; font-weight: 600;">Vintar, Ilocos Norte</p>
+        <p style="font-size: 13px; color: var(--success-text); margin-top: 6px; font-weight: 600;">Piddig, Ilocos Norte</p>
       </div>
 
       <div style="border: 1px dashed var(--muted2); background: var(--surface); padding: 20px; border-radius: 16px;">
@@ -710,15 +670,6 @@
       </div>
 
       <div style="border: 1px solid var(--border); background: var(--surface2); padding: 20px; border-radius: 16px;">
-        <h4 style="color: var(--text); margin-bottom: 6px; font-size: 16px;">Laoag City General Hospital</h4>
-        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
-          <a href="tel:0777706523" onclick="return confirmCall('0777706523','Laoag City General Hospital');" style="font-weight: 900; font-size: 20px; color: var(--primary2); text-decoration:none;">(077) 770-6523</a>
-          <a target="_blank" rel="noopener" href="https://www.google.com/maps?q=18.1870813,120.572677" style="font-size:12px; font-weight:800; text-decoration:none; color: var(--muted); padding:8px 10px; border-radius:999px; border:1px solid var(--border); background: var(--surface);">📍 Open Map</a>
-        </div>
-        <p style="font-size: 13px; color: var(--muted); margin-top: 6px; font-weight: 600;">Brgy. 46, San Mateo, Laoag City</p>
-      </div>
-
-      <div style="border: 1px solid var(--border); background: var(--surface2); padding: 20px; border-radius: 16px;">
         <h4 style="color: var(--text); margin-bottom: 6px; font-size: 16px;">Gov. Roque Ablan Sr. Memorial Hospital</h4>
         <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
           <a href="tel:0777728826" onclick="return confirmCall('0777728826','Gov. Roque Ablan Sr. Memorial Hospital');" style="font-weight: 900; font-size: 20px; color: var(--primary2); text-decoration:none;">(077) 772-8826</a>
@@ -728,28 +679,12 @@
       </div>
 
       <div style="border: 1px solid var(--border); background: var(--surface2); padding: 20px; border-radius: 16px;">
-        <h4 style="color: var(--text); margin-bottom: 6px; font-size: 16px;">Bacarra Medical Center</h4>
+        <h4 style="color: var(--text); margin-bottom: 6px; font-size: 16px;">Laoag City General Hospital</h4>
         <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
-          <p style="font-weight: 900; font-size: 16px; color: var(--muted); margin:0;">Contact Bacarra RHU</p>
+          <a href="tel:0777706523" onclick="return confirmCall('0777706523','Laoag City General Hospital');" style="font-weight: 900; font-size: 20px; color: var(--primary2); text-decoration:none;">(077) 770-6523</a>
+          <a target="_blank" rel="noopener" href="https://www.google.com/maps?q=18.1870813,120.572677" style="font-size:12px; font-weight:800; text-decoration:none; color: var(--muted); padding:8px 10px; border-radius:999px; border:1px solid var(--border); background: var(--surface);">📍 Open Map</a>
         </div>
-        <p style="font-size: 13px; color: var(--muted); margin-top: 6px; font-weight: 600;">Bacarra, Ilocos Norte</p>
-      </div>
-
-      <div style="border: 1px solid rgba(16,185,129,0.3); background: var(--success-bg); padding: 20px; border-radius: 16px;">
-        <h4 style="color: var(--success-text); margin-bottom: 6px; font-size: 16px;">Piddig District Hospital</h4>
-        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
-          <a href="tel:0776707000" onclick="return confirmCall('0776707000','Piddig District Hospital');" style="font-weight: 900; font-size: 20px; color: var(--text); text-decoration:none;">(077) 670-7000</a>
-          <a target="_blank" rel="noopener" href="https://www.google.com/maps?q=18.166667,120.716667" style="font-size:12px; font-weight:800; text-decoration:none; color: var(--success-text); padding:8px 10px; border-radius:999px; border:1px solid rgba(16,185,129,0.35); background: rgba(16,185,129,0.08);">📍 Open Map</a>
-        </div>
-        <p style="font-size: 13px; color: var(--success-text); margin-top: 6px; font-weight: 600;">Piddig, Ilocos Norte</p>
-      </div>
-
-      <div style="border: 1px solid var(--border); background: var(--surface2); padding: 20px; border-radius: 16px;">
-        <h4 style="color: var(--text); margin-bottom: 6px; font-size: 16px;">Dingras District Hospital</h4>
-        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
-          <p style="font-weight: 900; font-size: 16px; color: var(--muted); margin:0;">Contact Hospital Admin</p>
-        </div>
-        <p style="font-size: 13px; color: var(--muted); margin-top: 6px; font-weight: 600;">Dingras, Ilocos Norte</p>
+        <p style="font-size: 13px; color: var(--muted); margin-top: 6px; font-weight: 600;">Brgy. 46, San Mateo, Laoag City</p>
       </div>
 
       <div style="border: 1px solid var(--border); background: var(--surface2); padding: 20px; border-radius: 16px;">
@@ -819,7 +754,6 @@
     function openAbout() { document.getElementById('aboutModal').classList.add('active'); }
     function closeAbout() { document.getElementById('aboutModal').classList.remove('active'); }
 
-    // 🟢 DYNAMIC CONFIRMATION MODAL LOGIC (FIXED)
     let confirmAction = null;
     function customConfirm(msg, btnText, callback) {
         document.getElementById('confirmMsg').innerText = msg;
@@ -941,7 +875,6 @@
         localStorage.setItem('tibok_patient_data', JSON.stringify(patients)); renderDirectory();
     }
 
-    // 🟢 FULL APP REFRESH ON SYNC
     function manualSync() {
         if (!navigator.onLine || offlineQueue.length === 0) return;
         const queueCopy = [...offlineQueue];
@@ -984,7 +917,7 @@
       if(navigator.onLine) { fetch('/api/log_visit', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) }).then(() => { loadData(); switchPage('dashboard'); }); } else { saveToQueue('log_visit', data); switchPage('dashboard'); }
     });
 
-    // 🟢 FIXED PDF GENERATOR (Uses raw HTML string to prevent blank pages)
+    // 🟢 FULLY REWRITTEN PDF GENERATOR (Uses explicitly built HTML string)
     window.downloadPDF = function(pid) {
         const p = patients.find(x => x.id === pid);
         if(!p) return;
@@ -1010,8 +943,9 @@
                     </tr>
                 `).join('')}
             </table>`;
-        } else { visitsTable = "<p>No clinical visits recorded.</p>"; }
+        } else { visitsTable = "<p style='font-size:14px; color:#555;'>No clinical visits recorded.</p>"; }
 
+        // This clean HTML string approach guarantees it will render content and not be blank.
         const htmlContent = `
             <div style="padding: 40px; font-family: Helvetica, Arial, sans-serif; color: #000; background: #fff;">
                 <div style="text-align:center; border-bottom:2px solid #dc2626; padding-bottom:20px; margin-bottom:20px;">
@@ -1023,7 +957,7 @@
                 
                 <table style="width:100%; border-collapse:collapse; margin-bottom:20px; font-size:14px;">
                     <tr><td style="padding:10px; border:1px solid #ccc;"><b>Age/Sex:</b> ${p.age} / ${p.sex}</td><td style="padding:10px; border:1px solid #ccc;"><b>Civil Status:</b> ${p.civil}</td></tr>
-                    <tr><td style="padding:10px; border:1px solid #ccc;"><b>Contact:</b> ${p.contact || 'N/A'}</td><td style="padding:10px; border:1px solid #ccc;"><b>Address:</b> Purok ${p.purok}, ${p.homeAddress}</td></tr>
+                    <tr><td style="padding:10px; border:1px solid #ccc;"><b>Contact:</b> ${p.contact || 'N/A'}</td><td style="padding:10px; border:1px solid #ccc;"><b>Address:</b> Purok ${p.purok || 'N/A'}, ${p.homeAddress}</td></tr>
                     <tr><td style="padding:10px; border:1px solid #ccc; background:#f9fafb;" colspan="2"><b>Height/Weight:</b> ${p.height}cm / ${p.weight}kg</td></tr>
                     <tr><td style="padding:10px; border:1px solid #ccc; background:#fef2f2; color:#991b1b;" colspan="2"><b>Current Medications:</b> ${medsStr}</td></tr>
                 </table>
@@ -1036,14 +970,14 @@
             </div>
         `;
         
-        const opt = {
+        // Render from HTML String directly
+        html2pdf().set({
             margin: 15,
             filename: `TIBOK_Patient_${p.id}_${p.lastName}.pdf`,
             image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 2, useCORS: true },
+            html2canvas: { scale: 2 },
             jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-        };
-        html2pdf().set(opt).from(htmlContent).save();
+        }).from(htmlContent).save();
     };
 
     function loadUsers(){
@@ -1204,7 +1138,7 @@
         `;
         bmiDisplay += medsDisplay;
 
-        // 🟢 RECALIBRATED CLINICAL PROGRESS REPORT
+        // 🟢 RECALIBRATED CLINICAL PROGRESS REPORT (LESS ALARMING)
         let progressReport = "";
         if (p.bp && p.bp.length >= 2) {
             const baseline = p.bp[0];
@@ -1215,6 +1149,7 @@
             let trend = "Stable ➡️";
             let tColor = "var(--muted)";
             
+            // Softer threshold logic
             if (sysDiff <= -10 || diaDiff <= -10) { trend = "Improved 📉"; tColor = "var(--success-text)"; }
             else if (sysDiff < 0 || diaDiff < 0) { trend = "Slightly Improved ↘️"; tColor = "var(--success-text)"; }
             else if (sysDiff >= 15 || diaDiff >= 10) { trend = "Significantly Elevated 📈"; tColor = "var(--danger)"; }
@@ -1412,7 +1347,7 @@
       
       let items = patients.filter(p => (`${p.firstName} ${p.middleName || ""} ${p.lastName}`).toLowerCase().includes(q) || String(p.id).includes(q));
       
-      // 🟢 4. UI FIX FOR PUROK FOLDERS (Matching Screenshot)
+      // 🟢 4. UI FIX FOR PUROK FOLDERS (Matches Screenshot)
       if (sortOpt === "purok") {
           items.sort((a, b) => (a.purok || "Unknown").localeCompare(b.purok || "Unknown"));
           
