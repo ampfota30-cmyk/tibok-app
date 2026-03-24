@@ -247,7 +247,7 @@
   </div>
 
   <div class="modal-overlay" id="exportModal" onclick="if(event.target===this) closeExportModal()">
-    <div class="modal-box" style="text-align: left; max-width: 500px; padding: 32px 24px;">
+    <div class="modal-box" style="text-align: left; max-width: 500px; padding: 32px 24px; max-height: 85vh; overflow-y: auto;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
             <h3 style="margin:0; font-weight:900; font-size: 20px;">📥 Export Data to PDF</h3>
             <button onclick="closeExportModal()" style="background:var(--surface2); border:1px solid var(--border); color:var(--text); width:32px; height:32px; border-radius:8px; cursor:pointer; font-weight:bold;">✕</button>
@@ -1058,7 +1058,7 @@
       if(navigator.onLine) { fetch('/api/log_visit', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) }).then(() => { loadData(); switchPage('dashboard'); }); } else { saveToQueue('log_visit', data); switchPage('dashboard'); }
     });
 
-    // 🟢 PDF GENERATOR (AESTHETIC + 100% BULLETPROOF STRING RENDER)
+    // 🟢 PDF GENERATOR (AESTHETIC + 100% BULLETPROOF MOBILE SCALING)
     window.generateRegistryPDF = async function(mode, payload) {
         if (!navigator.onLine) {
             alert("⚠️ Export Failed: You are offline.\n\nExporting requires an active internet connection to pull the true, up-to-date records directly from the secure database.");
@@ -1111,9 +1111,9 @@
                 return (a.lastName || "").localeCompare(b.lastName || "");
             });
 
-            // 🟢 Uses 100% width. PDF Engine auto-scales it beautifully to A4.
+            // 🟢 FORCE EXACT DESKTOP DIMENSIONS ON MOBILE
             let fullHtml = `
-                <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #1e293b; background: #fff; box-sizing: border-box; width: 100%;">
+                <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #1e293b; background: #fff; box-sizing: border-box; width: 800px !important; min-width: 800px !important; max-width: none !important; margin: 0; padding: 0;">
                     <style>
                         .avoid-break { page-break-inside: avoid !important; break-inside: avoid !important; }
                         tr { page-break-inside: avoid !important; break-inside: avoid !important; }
@@ -1138,7 +1138,6 @@
             targetPatients.forEach((p, index) => {
                 const medsStr = (p.medications && p.medications.length > 0) ? p.medications.join(", ") : "None recorded";
                 
-                // 🟢 FIXED TABLE LAYOUT
                 let visitsTable = "";
                 if(p.visits && p.visits.length > 0) {
                     visitsTable = `
@@ -1285,27 +1284,56 @@
 
             fullHtml += `</div>`;
 
-            // 🟢 Pass the raw HTML string directly to the engine
+            // 🟢 FORCE THE BROWSER TO RENDER THE FULL 800PX CANVAS BEHIND THE SCENES
+            const container = document.createElement("div");
+            container.id = "pdf-export-container";
+            container.innerHTML = fullHtml;
+            container.style.position = "fixed";  // Changed to fixed
+            container.style.top = "0";
+            container.style.left = "0";
+            container.style.width = "800px"; 
+            container.style.minWidth = "800px"; // Crucial for mobile
+            container.style.maxWidth = "none";  // Crucial for mobile
+            container.style.backgroundColor = "#ffffff";
+            container.style.color = "#000000";
+            container.style.zIndex = "-9999"; 
+            container.style.opacity = "1"; 
+            container.style.pointerEvents = "none";
+            container.style.transform = "none"; // Disable scaling
+            
+            document.body.appendChild(container);
+
+            await new Promise(r => requestAnimationFrame(r));
+            await new Promise(r => setTimeout(r, 400)); 
+
             const opt = {
-                margin:       10, // mm
+                margin:       0.5, 
                 filename:     filename,
                 image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2, useCORS: true, logging: false },
-                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                html2canvas:  { 
+                    scale: 2, 
+                    useCORS: true, 
+                    logging: false,
+                    windowWidth: 800, // Forces the PDF engine to use an 800px viewport, ignoring the phone screen
+                    width: 800
+                },
+                jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' },
                 pagebreak:    { mode: ['css', 'legacy'], avoid: ['.avoid-break', 'tr'] }
             };
             
-            html2pdf().set(opt).from(fullHtml).save().then(() => {
+            html2pdf().set(opt).from(container).save().then(() => {
+                if(document.body.contains(container)) document.body.removeChild(container);
                 loader.classList.remove('active');
             }).catch(err => {
                 console.error(err);
+                if(document.body.contains(container)) document.body.removeChild(container);
                 loader.classList.remove('active');
                 alert("PDF generation failed unexpectedly. Please try again.");
             });
 
         } catch (error) {
             loader.classList.remove('active');
-            alert("Error fetching data from the server. Please try again.");
+            alert("Error connecting to MongoDB Atlas. Ensure your internet connection is stable.");
             console.error(error);
         }
     };
