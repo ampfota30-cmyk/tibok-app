@@ -1058,7 +1058,7 @@
       if(navigator.onLine) { fetch('/api/log_visit', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) }).then(() => { loadData(); switchPage('dashboard'); }); } else { saveToQueue('log_visit', data); switchPage('dashboard'); }
     });
 
-    // 🟢 PDF GENERATOR: Beautiful Aesthetic + Bulletproof Scroll Fix
+    // 🟢 PDF GENERATOR (REVERTED TO 100% WORKING STRING METHOD)
     window.generateRegistryPDF = async function(mode, payload) {
         if (!navigator.onLine) {
             alert("⚠️ Export Failed: You are offline.\n\nExporting requires an active internet connection to pull the true, up-to-date records directly from the secure database.");
@@ -1265,51 +1265,20 @@
 
             fullHtml += `</div>`;
 
-            // Reset scroll position to fix the Blank PDF capture glitch
-            const originalScrollY = window.scrollY;
-            window.scrollTo(0, 0);
-
-            const container = document.createElement("div");
-            container.id = "pdf-export-container";
-            container.innerHTML = fullHtml;
-            container.style.position = "absolute";
-            container.style.top = "0";
-            container.style.left = "0";
-            container.style.width = "800px"; 
-            container.style.backgroundColor = "#ffffff";
-            container.style.color = "#000000";
-            container.style.zIndex = "100"; 
-            container.style.opacity = "1"; 
-            container.style.pointerEvents = "none";
-            
-            document.body.appendChild(container);
-
-            await new Promise(r => requestAnimationFrame(r));
-            await new Promise(r => setTimeout(r, 400)); 
-
+            // 🟢 EXACT FIX FROM v2.html: Pass the raw string directly!
             const opt = {
                 margin:       10, 
                 filename:     filename,
                 image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { 
-                    scale: 2, 
-                    useCORS: true, 
-                    logging: false,
-                    scrollY: 0,
-                    scrollX: 0
-                },
+                html2canvas:  { scale: 2, useCORS: true, letterRendering: true, logging: false },
                 jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
             
-            html2pdf().set(opt).from(container).save().then(() => {
-                if(document.body.contains(container)) document.body.removeChild(container);
+            html2pdf().set(opt).from(fullHtml).save().then(() => {
                 loader.classList.remove('active');
-                window.scrollTo(0, originalScrollY);
             }).catch(err => {
                 console.error(err);
-                if(document.body.contains(container)) document.body.removeChild(container);
                 loader.classList.remove('active');
-                window.scrollTo(0, originalScrollY);
                 alert("PDF generation failed unexpectedly. Please try again.");
             });
 
