@@ -283,8 +283,8 @@
     </div>
   </div>
 
-  <div class="modal-overlay" id="loadingModal" style="z-index: 999999; background: rgba(15,23,42,0.8); backdrop-filter: blur(8px);">
-     <div class="modal-box" style="text-align: center; max-width: 320px; padding: 40px 20px; background: var(--bg); border: 1px solid var(--border);">
+  <div class="modal-overlay" id="loadingModal" style="z-index: 999999; background: var(--bg);">
+     <div class="modal-box" style="text-align: center; max-width: 320px; padding: 40px 20px; background: var(--surface); border: 1px solid var(--border);">
          <div style="border: 5px solid var(--surface2); border-top: 5px solid var(--primary); border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 0 auto 20px;"></div>
          <h2 style="font-weight: 900; color: var(--text); font-size: 20px; margin-bottom: 8px;">Generating PDF...</h2>
          <p style="color: var(--muted); font-size: 14px; font-weight: 600; line-height: 1.5;">Securely fetching live records from MongoDB Atlas.</p>
@@ -996,7 +996,16 @@
             const p = patients.find(p => p.id === data.patientId);
             if(p) {
                 p.bp.push({ date: "Just now", sys: data.sys, dia: data.dia });
-                p.visits.unshift({ date: "Just now", title: data.visitType, avg: `${data.sys}/${data.dia}`, notes: data.notes, assessed_by: activeUser.name });
+                p.visits.unshift({ 
+                    date: "Just now", 
+                    title: data.visitType, 
+                    avg: `${data.sys}/${data.dia}`, 
+                    height: parseFloat(data.height) || 0,
+                    weight: parseFloat(data.weight) || 0,
+                    medications: data.medications || [],
+                    notes: data.notes, 
+                    assessed_by: activeUser.name 
+                });
                 if (data.height) p.height = parseFloat(data.height);
                 if (data.weight) p.weight = parseFloat(data.weight);
             }
@@ -1049,20 +1058,23 @@
       if(navigator.onLine) { fetch('/api/log_visit', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) }).then(() => { loadData(); switchPage('dashboard'); }); } else { saveToQueue('log_visit', data); switchPage('dashboard'); }
     });
 
-    // 🟢 UNIVERSAL PDF GENERATOR (SERVER-STATE ONLY + NO BLANK PAGES)
+    // 🟢 PDF GENERATOR: Fixed Crash Issue + Formatted Data
     window.generateRegistryPDF = async function(mode, payload) {
         if (!navigator.onLine) {
             alert("⚠️ Export Failed: You are offline.\n\nExporting requires an active internet connection to pull the true, up-to-date records directly from the secure database.");
             return;
         }
 
-        // Close the export menu and show the beautiful loading overlay
+        if (typeof html2pdf === 'undefined') {
+            alert("⚠️ PDF System Loading... Please wait a few seconds and try again.");
+            return;
+        }
+
         closeExportModal();
         const loader = document.getElementById('loadingModal');
         loader.classList.add('active');
 
         try {
-            // Fetch live from MongoDB Atlas
             const response = await fetch('/api/data');
             const serverPatients = await response.json();
 
@@ -1099,7 +1111,7 @@
                 return (a.lastName || "").localeCompare(b.lastName || "");
             });
 
-            // Build PDF HTML
+            // NO EMOJIS HERE. Emojis crash the PDF engine.
             let fullHtml = `
                 <div style="font-family: Helvetica, Arial, sans-serif; color: #000; background: #fff; padding: 20px; width: 100%; box-sizing: border-box;">
                     <div style="text-align:center; border-bottom:3px solid #dc2626; padding-bottom:15px; margin-bottom:25px;">
@@ -1119,19 +1131,32 @@
                         <tr style="background:#dc2626; color:#fff;">
                             <th style="padding:6px; text-align:left; border:1px solid #b91c1c;">Date</th>
                             <th style="padding:6px; text-align:left; border:1px solid #b91c1c;">Type</th>
-                            <th style="padding:6px; text-align:left; border:1px solid #b91c1c;">BP</th>
-                            <th style="padding:6px; text-align:left; border:1px solid #b91c1c;">Assessed By</th>
-                            <th style="padding:6px; text-align:left; border:1px solid #b91c1c;">Notes</th>
+                            <th style="padding:6px; text-align:left; border:1px solid #b91c1c;">Vitals & BMI</th>
+                            <th style="padding:6px; text-align:left; border:1px solid #b91c1c;">Medications</th>
+                            <th style="padding:6px; text-align:left; border:1px solid #b91c1c;">Notes / By</th>
                         </tr>
-                        ${p.visits.slice(0, 10).map(v => `
+                        ${p.visits.slice(0, 10).map(v => {
+                            let vBmi = "N/A";
+                            if (v.height > 0 && v.weight > 0) {
+                                vBmi = (v.weight / Math.pow(v.height/100, 2)).toFixed(1);
+                            }
+                            let vMeds = (v.medications && v.medications.length > 0) ? v.medications.join(", ") : "--";
+                            return `
                             <tr>
                                 <td style="padding:6px; border:1px solid #ccc; white-space:nowrap;">${v.date.split(" ")[0]}</td>
                                 <td style="padding:6px; border:1px solid #ccc;">${v.title}</td>
-                                <td style="padding:6px; border:1px solid #ccc; font-weight:bold; color:#dc2626; white-space:nowrap;">${v.avg}</td>
-                                <td style="padding:6px; border:1px solid #ccc;">${v.assessed_by || 'N/A'}</td>
-                                <td style="padding:6px; border:1px solid #ccc;">${v.notes || 'No notes.'}</td>
+                                <td style="padding:6px; border:1px solid #ccc; white-space:nowrap;">
+                                    <span style="color:#dc2626; font-weight:bold;">BP: ${v.avg}</span><br>
+                                    <span style="color:#64748b;">BMI: ${vBmi}</span>
+                                </td>
+                                <td style="padding:6px; border:1px solid #ccc;">${vMeds}</td>
+                                <td style="padding:6px; border:1px solid #ccc;">
+                                    ${v.notes || 'No notes.'}<br>
+                                    <i style="color:#64748b; font-size:9px;">- ${v.assessed_by || 'N/A'}</i>
+                                </td>
                             </tr>
-                        `).join('')}
+                            `;
+                        }).join('')}
                     </table>`;
                 } else { visitsTable = "<p style='font-size:11px; color:#64748b;'>No clinical visits recorded.</p>"; }
 
@@ -1140,6 +1165,8 @@
                     let heightM = p.height / 100;
                     let bmi = (p.weight / (heightM * heightM)).toFixed(1);
                     bmiDisplay = `${bmi} - H: ${p.height}cm | W: ${p.weight}kg`;
+                } else if (p.height > 0 || p.weight > 0) {
+                    bmiDisplay = `H: ${p.height||'--'}cm | W: ${p.weight||'--'}kg`;
                 }
 
                 let progressReport = "<p style='font-size:11px; color:#64748b;'>Not enough data to calculate trend.</p>";
@@ -1210,24 +1237,44 @@
 
             fullHtml += `</div>`;
 
-            // 🟢 THE FIX FOR BLANK PDF: 
-            // html2pdf can render HTML strings natively inside its own isolated iframe.
-            // We just pass it the string and wait.
+            const container = document.createElement("div");
+            container.id = "pdf-export-container";
+            container.innerHTML = fullHtml;
+            container.style.position = "absolute";
+            container.style.top = "0";
+            container.style.left = "0";
+            container.style.width = "800px"; 
+            container.style.background = "#ffffff";
+            container.style.zIndex = "100"; // Behind the loader which is 999999
+            container.style.opacity = "1"; // MUST be 1 or html2canvas creates a blank box
+            container.style.pointerEvents = "none";
+            
+            document.body.appendChild(container);
+
+            await new Promise(r => requestAnimationFrame(r));
+            await new Promise(r => setTimeout(r, 300)); 
+
             const opt = {
                 margin:       10, 
                 filename:     filename,
                 image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2, useCORS: true, letterRendering: true, logging: false },
+                html2canvas:  { scale: 2, useCORS: true, logging: false },
                 jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
             
-            html2pdf().set(opt).from(fullHtml).save().then(() => {
-                loader.classList.remove('active'); // Hide the loading screen
+            html2pdf().set(opt).from(container).save().then(() => {
+                if(document.body.contains(container)) document.body.removeChild(container);
+                loader.classList.remove('active');
+            }).catch(err => {
+                console.error(err);
+                if(document.body.contains(container)) document.body.removeChild(container);
+                loader.classList.remove('active');
+                alert("PDF generation failed unexpectedly. Please try again.");
             });
 
         } catch (error) {
             loader.classList.remove('active');
-            alert("Error fetching data from the server. Please try again.");
+            alert("Error connecting to MongoDB Atlas. Ensure your internet connection is stable.");
             console.error(error);
         }
     };
@@ -1379,6 +1426,8 @@
                     </div>
                 </div>
             `;
+        } else if(p.height > 0 || p.weight > 0) {
+            bmiDisplay = `<div style="text-align:center; color:var(--muted2); font-weight:700; font-size:13px; font-style:italic;">Incomplete Data - H: ${p.height||'--'}cm | W: ${p.weight||'--'}kg</div>`;
         }
 
         let medsList = (p.medications && p.medications.length > 0) ? p.medications.join(", ") : "None recorded";
@@ -1433,6 +1482,11 @@
           visitsHtml = p.visits.map(v => {
             let noteText = (v.notes && v.notes !== "None" && v.notes !== "null" && v.notes !== "undefined") ? v.notes.trim() : "";
             const bhwText = v.assessed_by && v.assessed_by !== "Unknown" ? v.assessed_by : "System Admin";
+            
+            let vBmi = "N/A";
+            if (v.height > 0 && v.weight > 0) vBmi = (v.weight / Math.pow(v.height/100, 2)).toFixed(1);
+            let vMeds = (v.medications && v.medications.length > 0) ? v.medications.join(", ") : "Unchanged/None";
+
             let notesDisplay = noteText
               ? `<div style="margin-top:8px; font-size:14px; color:var(--text); padding:12px; border-radius:10px; border:1px solid var(--border); background: var(--surface); line-height:1.55; font-weight:600; white-space:pre-wrap;">${noteText}</div>`
               : `<div style="margin-top:8px; font-size:13px; color:var(--muted); font-style: italic;">No clinical notes.</div>`;
@@ -1456,8 +1510,9 @@
                 <div style="padding:16px; border-top:1px solid var(--border); background: var(--bg);">
                   <div style="display:flex; align-items:center; justify-content:flex-start; gap:12px; margin-bottom:12px;">
                     <span style="color:var(--primary2); font-size:14px; font-weight:900; white-space:nowrap; padding:6px 10px; border-radius:999px; background: rgba(220, 38, 38, 0.08); border:1px solid rgba(220, 38, 38, 0.14);">BP: ${v.avg}</span>
+                    <span style="color:var(--muted); font-size:13px; font-weight:800; white-space:nowrap; padding:6px 10px; border-radius:999px; background: var(--surface2); border:1px solid var(--border);">BMI: ${vBmi}</span>
                   </div>
-                  <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; font-size: 13px;">
+                  <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; font-size: 13px;">
                     <div style="background:var(--surface); border:1px solid var(--border); padding:10px; border-radius:10px;">
                       <strong style="color:var(--muted); text-transform:uppercase; font-size:11px; display:block; margin-bottom:2px;">Visit Type</strong>
                       <span style="font-weight:900; color:var(--text);">${v.title}</span>
@@ -1466,6 +1521,10 @@
                       <strong style="color:var(--muted); text-transform:uppercase; font-size:11px; display:block; margin-bottom:2px;">Assessed By</strong>
                       <span style="font-weight:900; color:var(--text);">${bhwText}</span>
                     </div>
+                  </div>
+                  <div style="background:var(--surface); border:1px solid var(--border); padding:10px; border-radius:10px; margin-bottom: 12px;">
+                      <strong style="color:var(--muted); text-transform:uppercase; font-size:11px; display:block; margin-bottom:2px;">Medications Logged</strong>
+                      <span style="font-weight:700; color:var(--primary2); font-size:13px;">💊 ${vMeds}</span>
                   </div>
                   <div>
                     <strong style="color:var(--muted); text-transform:uppercase; font-size:11px;">Clinical Notes / Findings</strong>
@@ -1536,6 +1595,7 @@
           </div>
           
           <div class="row-actions" style="justify-content:flex-end; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border);">
+              <button class="smallbtn" style="background: var(--surface); border: 1px solid var(--border); color: var(--text);" onclick="generateRegistryPDF('patient', '${p.id}')">📄 Export PDF</button>
               <button class="smallbtn" style="background: var(--surface); border: 1px solid var(--border); color: var(--text);" data-action="edit" data-id="${p.id}">✏️ Edit Info</button>
               <button class="smallbtn danger" data-action="delete" data-id="${p.id}">🗑️ Delete</button>
           </div>
@@ -1614,11 +1674,12 @@
               
               const summary = document.createElement("summary");
               summary.innerHTML = `
-                <div style="display:flex; align-items:center; gap: 12px;">
+                <div style="display:flex; align-items:center; gap: 12px; width: 100%;">
                     <span style="font-size: 22px;">📁</span>
                     <span style="font-weight: 900; font-size: 18px; color: var(--text);">${groupName}</span>
+                    <span class="pill" style="background: var(--bg); border: 1px solid var(--border); font-weight: 800; color: var(--muted); padding: 4px 12px; border-radius: 999px;">${groups[groupName].length}</span>
+                    <button class="smallbtn" style="margin-left: auto; padding: 6px 12px; font-size: 12px; z-index: 2;" onclick="event.preventDefault(); event.stopPropagation(); generateRegistryPDF('purok', '${groupName}')">📥 Export Purok</button>
                 </div>
-                <span class="pill" style="background: var(--bg); border: 1px solid var(--border); font-weight: 800; color: var(--muted); padding: 4px 12px; border-radius: 999px;">${groups[groupName].length}</span>
               `;
               
               const content = document.createElement("div");
