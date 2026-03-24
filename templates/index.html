@@ -283,8 +283,8 @@
     </div>
   </div>
 
-  <div class="modal-overlay" id="loadingModal" style="z-index: 999999; background: var(--bg);">
-     <div class="modal-box" style="text-align: center; max-width: 320px; padding: 40px 20px; background: var(--surface); border: 1px solid var(--border);">
+  <div class="modal-overlay" id="loadingModal" style="z-index: 999999; background: rgba(15,23,42,0.8); backdrop-filter: blur(8px);">
+     <div class="modal-box" style="text-align: center; max-width: 320px; padding: 40px 20px; background: var(--bg); border: 1px solid var(--border);">
          <div style="border: 5px solid var(--surface2); border-top: 5px solid var(--primary); border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 0 auto 20px;"></div>
          <h2 style="font-weight: 900; color: var(--text); font-size: 20px; margin-bottom: 8px;">Generating PDF...</h2>
          <p style="color: var(--muted); font-size: 14px; font-weight: 600; line-height: 1.5;">Securely fetching live records from MongoDB Atlas.</p>
@@ -1058,23 +1058,20 @@
       if(navigator.onLine) { fetch('/api/log_visit', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) }).then(() => { loadData(); switchPage('dashboard'); }); } else { saveToQueue('log_visit', data); switchPage('dashboard'); }
     });
 
-    // 🟢 PDF GENERATOR: Fixed "Scroll Bug" + Force Visible Render
+    // 🟢 UNIVERSAL PDF GENERATOR (SERVER-STATE ONLY + NO BLANK PAGES)
     window.generateRegistryPDF = async function(mode, payload) {
         if (!navigator.onLine) {
             alert("⚠️ Export Failed: You are offline.\n\nExporting requires an active internet connection to pull the true, up-to-date records directly from the secure database.");
             return;
         }
 
-        if (typeof html2pdf === 'undefined') {
-            alert("⚠️ PDF System Loading... Please wait a few seconds and try again.");
-            return;
-        }
-
+        // Close the export menu and show the beautiful loading overlay
         closeExportModal();
         const loader = document.getElementById('loadingModal');
         loader.classList.add('active');
 
         try {
+            // Fetch live from MongoDB Atlas
             const response = await fetch('/api/data');
             const serverPatients = await response.json();
 
@@ -1111,9 +1108,9 @@
                 return (a.lastName || "").localeCompare(b.lastName || "");
             });
 
-            // NO EMOJIS HERE.
+            // Build PDF HTML
             let fullHtml = `
-                <div style="font-family: Helvetica, Arial, sans-serif; color: #000; background: #fff; padding: 20px; width: 100%; box-sizing: border-box;">
+                <div style="font-family: Helvetica, Arial, sans-serif; color: #000; background: #fff; padding: 30px; width: 800px; margin: 0 auto; box-sizing: border-box;">
                     <div style="text-align:center; border-bottom:3px solid #dc2626; padding-bottom:15px; margin-bottom:25px;">
                         <h1 style="color:#dc2626; margin:0; font-size: 24px; font-weight: 900; letter-spacing: -0.5px;">TIBOK Health Registry</h1>
                         <p style="margin:5px 0 0 0; color:#64748b; font-size:12px; font-weight: 600; text-transform: uppercase;">${reportTitle}</p>
@@ -1237,56 +1234,26 @@
 
             fullHtml += `</div>`;
 
-            // 🟢 CRITICAL SCROLL BUG FIX
-            const container = document.createElement("div");
-            container.id = "pdf-export-container";
-            container.innerHTML = fullHtml;
-            container.style.position = "absolute";
-            container.style.top = "0";
-            container.style.left = "0";
-            container.style.width = "800px"; 
-            container.style.backgroundColor = "#ffffff";
-            container.style.color = "#000000";
-            container.style.zIndex = "999998"; // Keeps it behind the loading modal
-            
-            // 1. Temporarily scroll the window to the very top to prevent blank capture
-            const originalScrollY = window.scrollY;
-            window.scrollTo(0, 0);
-
-            document.body.appendChild(container);
-
-            await new Promise(r => requestAnimationFrame(r));
-            await new Promise(r => setTimeout(r, 400)); 
-
             const opt = {
                 margin:       10, 
                 filename:     filename,
                 image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { 
-                    scale: 2, 
-                    useCORS: true, 
-                    logging: false,
-                    scrollY: 0, // 2. Force the canvas engine to start at Y: 0
-                    scrollX: 0
-                },
+                html2canvas:  { scale: 2, useCORS: true, letterRendering: true, logging: false },
                 jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
             
-            html2pdf().set(opt).from(container).save().then(() => {
-                if(document.body.contains(container)) document.body.removeChild(container);
-                loader.classList.remove('active');
-                window.scrollTo(0, originalScrollY); // 3. Restore the user's scroll position
+            // Generate PDF directly from the pure HTML string (NO scroll bug possible)
+            html2pdf().set(opt).from(fullHtml).save().then(() => {
+                loader.classList.remove('active'); // Hide the loading screen
             }).catch(err => {
                 console.error(err);
-                if(document.body.contains(container)) document.body.removeChild(container);
                 loader.classList.remove('active');
-                window.scrollTo(0, originalScrollY);
                 alert("PDF generation failed unexpectedly. Please try again.");
             });
 
         } catch (error) {
             loader.classList.remove('active');
-            alert("Error connecting to MongoDB Atlas. Ensure your internet connection is stable.");
+            alert("Error fetching data from the server. Please try again.");
             console.error(error);
         }
     };
@@ -1438,7 +1405,7 @@
                     </div>
                 </div>
             `;
-        } else if(p.height > 0 || p.weight > 0) {
+        } else if (p.height > 0 || p.weight > 0) {
             bmiDisplay = `<div style="text-align:center; color:var(--muted2); font-weight:700; font-size:13px; font-style:italic;">Incomplete Data - H: ${p.height||'--'}cm | W: ${p.weight||'--'}kg</div>`;
         }
 
@@ -1690,7 +1657,6 @@
                     <span style="font-size: 22px;">📁</span>
                     <span style="font-weight: 900; font-size: 18px; color: var(--text);">${groupName}</span>
                     <span class="pill" style="background: var(--bg); border: 1px solid var(--border); font-weight: 800; color: var(--muted); padding: 4px 12px; border-radius: 999px;">${groups[groupName].length}</span>
-                    <button class="smallbtn" style="margin-left: auto; padding: 6px 12px; font-size: 12px; z-index: 2;" onclick="event.preventDefault(); event.stopPropagation(); generateRegistryPDF('purok', '${groupName}')">📥 Export Purok</button>
                 </div>
               `;
               
