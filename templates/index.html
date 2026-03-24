@@ -1058,7 +1058,7 @@
       if(navigator.onLine) { fetch('/api/log_visit', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) }).then(() => { loadData(); switchPage('dashboard'); }); } else { saveToQueue('log_visit', data); switchPage('dashboard'); }
     });
 
-    // 🟢 PDF GENERATOR (REVERTED TO 100% WORKING STRING METHOD)
+    // 🟢 PDF GENERATOR: Fixed Page Breaks & Horizontal Cutoffs
     window.generateRegistryPDF = async function(mode, payload) {
         if (!navigator.onLine) {
             alert("⚠️ Export Failed: You are offline.\n\nExporting requires an active internet connection to pull the true, up-to-date records directly from the secure database.");
@@ -1111,9 +1111,13 @@
                 return (a.lastName || "").localeCompare(b.lastName || "");
             });
 
-            // Beautiful Official Header
+            // Beautiful Official Header + CSS Page Break Rules
             let fullHtml = `
-                <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #1e293b; background: #fff; padding: 40px; box-sizing: border-box; width: 800px; margin: 0 auto;">
+                <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #1e293b; background: #fff; padding: 20px; box-sizing: border-box; width: 750px; margin: 0 auto;">
+                    <style>
+                        .avoid-break { page-break-inside: avoid !important; break-inside: avoid !important; }
+                        tr { page-break-inside: avoid !important; break-inside: avoid !important; }
+                    </style>
                     <div style="display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid #dc2626; padding-bottom: 16px; margin-bottom: 30px;">
                         <div>
                             <h1 style="color:#dc2626; margin:0; font-size: 28px; font-weight: 800; letter-spacing: -0.5px;">TIBOK Health Registry</h1>
@@ -1129,11 +1133,10 @@
             targetPatients.forEach((p, index) => {
                 const medsStr = (p.medications && p.medications.length > 0) ? p.medications.join(", ") : "None recorded";
                 
-                // Aesthetic Visit History Table
                 let visitsTable = "";
                 if(p.visits && p.visits.length > 0) {
                     visitsTable = `
-                    <table style="width:100%; border-collapse:collapse; font-size:11px; text-align: left;">
+                    <table style="width:100%; border-collapse:collapse; font-size:11px; text-align: left; margin-bottom: 10px;">
                         <thead>
                             <tr style="background:#f1f5f9; color:#475569; border-bottom: 2px solid #cbd5e1;">
                                 <th style="padding:10px 8px; font-weight: 700; text-transform: uppercase;">Date</th>
@@ -1144,7 +1147,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                        ${p.visits.slice(0, 8).map((v, i) => {
+                        ${p.visits.slice(0, 10).map((v, i) => {
                             let vBmi = "N/A";
                             if (v.height > 0 && v.weight > 0) {
                                 vBmi = (v.weight / Math.pow(v.height/100, 2)).toFixed(1);
@@ -1152,7 +1155,7 @@
                             let vMeds = (v.medications && v.medications.length > 0) ? v.medications.join(", ") : "--";
                             let rowBg = i % 2 === 0 ? "#ffffff" : "#f8fafc";
                             return `
-                            <tr style="background: ${rowBg}; border-bottom: 1px solid #e2e8f0;">
+                            <tr class="avoid-break" style="background: ${rowBg}; border-bottom: 1px solid #e2e8f0;">
                                 <td style="padding:12px 8px; font-weight: 600; color: #334155; white-space:nowrap; vertical-align: top;">${v.date.split(" ")[0]}</td>
                                 <td style="padding:12px 8px; color: #334155; vertical-align: top;">${v.title}</td>
                                 <td style="padding:12px 8px; vertical-align: top;">
@@ -1169,7 +1172,7 @@
                         }).join('')}
                         </tbody>
                     </table>`;
-                } else { visitsTable = "<p style='font-size:11px; color:#64748b;'>No clinical visits recorded.</p>"; }
+                } else { visitsTable = "<p class='avoid-break' style='font-size:11px; color:#64748b;'>No clinical visits recorded.</p>"; }
 
                 let bmiDisplay = "N/A";
                 if(p.height > 0 && p.weight > 0) {
@@ -1180,8 +1183,7 @@
                     bmiDisplay = `H: ${p.height||'--'}cm, W: ${p.weight||'--'}kg`;
                 }
 
-                // Aesthetic Progress Report Blocks
-                let progressReport = "<p style='font-size:11px; color:#64748b;'>Not enough data to calculate trend.</p>";
+                let progressReport = "<p class='avoid-break' style='font-size:11px; color:#64748b;'>Not enough data to calculate trend.</p>";
                 if (p.bp && p.bp.length >= 2) {
                     const baseline = p.bp[0];
                     const current = p.bp[p.bp.length - 1];
@@ -1196,7 +1198,7 @@
                     else if (sysDiff > 0 || diaDiff > 0) { trend = "Slightly Elevated"; tColor = "#d97706"; }
 
                     progressReport = `
-                        <div style="display: flex; justify-content: space-between; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; margin-bottom: 24px;">
+                        <div class="avoid-break" style="display: flex; justify-content: space-between; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; margin-bottom: 24px;">
                             <div style="flex: 1; padding: 12px; text-align: center; border-right: 1px solid #e2e8f0; background: #f8fafc;">
                                 <div style="color:#64748b; font-size: 10px; text-transform:uppercase; font-weight:700; margin-bottom:4px;">Baseline (${baseline.date.split(" ")[0]})</div>
                                 <div style="font-size:16px; font-weight:800; color: #0f172a;">${baseline.sys} / ${baseline.dia}</div>
@@ -1216,7 +1218,7 @@
                 if (index > 0) { fullHtml += `<div class="html2pdf__page-break"></div>`; }
 
                 fullHtml += `
-                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 20px;">
+                    <div class="avoid-break" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 20px;">
                         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #cbd5e1; padding-bottom: 12px; margin-bottom: 12px;">
                             <h2 style="margin: 0; font-size: 20px; font-weight: 800; color: #0f172a;">${index + 1}. ${p.lastName}, ${p.firstName} ${p.middleName || ''}</h2>
                             <span style="background: #d1fae5; color: #047857; padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: 700; text-transform: uppercase; border: 1px solid #34d399;">${p.status || 'ACTIVE'}</span>
@@ -1242,7 +1244,7 @@
                         </table>
                     </div>
 
-                    <div style="margin-bottom: 24px;">
+                    <div class="avoid-break" style="margin-bottom: 24px;">
                         <div style="display: flex; gap: 16px;">
                             <div style="flex: 1; border: 1px solid #fee2e2; background: #fef2f2; padding: 12px; border-radius: 8px;">
                                 <strong style="display: block; color: #b91c1c; font-size: 11px; text-transform: uppercase; margin-bottom: 4px;">Current Medications</strong>
@@ -1255,27 +1257,31 @@
                         </div>
                     </div>
 
-                    <h3 style="font-size: 14px; color: #0f172a; margin: 0 0 10px 0; border-bottom: 2px solid #e2e8f0; padding-bottom: 6px;">Clinical Progress</h3>
-                    ${progressReport}
+                    <div class="avoid-break">
+                        <h3 style="font-size: 14px; color: #0f172a; margin: 0 0 10px 0; border-bottom: 2px solid #e2e8f0; padding-bottom: 6px;">Clinical Progress</h3>
+                        ${progressReport}
+                    </div>
 
-                    <h3 style="font-size: 14px; color: #0f172a; margin: 0 0 10px 0; border-bottom: 2px solid #e2e8f0; padding-bottom: 6px;">Recent Visit History</h3>
-                    ${visitsTable}
+                    <div>
+                        <h3 class="avoid-break" style="font-size: 14px; color: #0f172a; margin: 0 0 10px 0; border-bottom: 2px solid #e2e8f0; padding-bottom: 6px;">Recent Visit History</h3>
+                        ${visitsTable}
+                    </div>
                 `;
             });
 
             fullHtml += `</div>`;
 
-            // 🟢 EXACT FIX FROM v2.html: Pass the raw string directly!
             const opt = {
-                margin:       10, 
+                margin:       [15, 10, 15, 10], // Top, Right, Bottom, Left margins
                 filename:     filename,
                 image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2, useCORS: true, letterRendering: true, logging: false },
-                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                html2canvas:  { scale: 2, useCORS: true, logging: false },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                pagebreak:    { mode: ['css', 'legacy'] } 
             };
             
             html2pdf().set(opt).from(fullHtml).save().then(() => {
-                loader.classList.remove('active');
+                loader.classList.remove('active'); // Hide the loading screen
             }).catch(err => {
                 console.error(err);
                 loader.classList.remove('active');
@@ -1284,7 +1290,7 @@
 
         } catch (error) {
             loader.classList.remove('active');
-            alert("Error connecting to MongoDB Atlas. Ensure your internet connection is stable.");
+            alert("Error fetching data from the server. Please try again.");
             console.error(error);
         }
     };
