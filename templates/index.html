@@ -1058,7 +1058,7 @@
       if(navigator.onLine) { fetch('/api/log_visit', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) }).then(() => { loadData(); switchPage('dashboard'); }); } else { saveToQueue('log_visit', data); switchPage('dashboard'); }
     });
 
-    // 🟢 PDF GENERATOR: Fixed Page Breaks & Horizontal Cutoffs
+    // 🟢 PDF GENERATOR (FIXED AESTHETICS + PAGE BREAK BUG)
     window.generateRegistryPDF = async function(mode, payload) {
         if (!navigator.onLine) {
             alert("⚠️ Export Failed: You are offline.\n\nExporting requires an active internet connection to pull the true, up-to-date records directly from the secure database.");
@@ -1118,7 +1118,7 @@
                         .avoid-break { page-break-inside: avoid !important; break-inside: avoid !important; }
                         tr { page-break-inside: avoid !important; break-inside: avoid !important; }
                     </style>
-                    <div style="display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid #dc2626; padding-bottom: 16px; margin-bottom: 30px;">
+                    <div class="avoid-break" style="display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid #dc2626; padding-bottom: 16px; margin-bottom: 30px;">
                         <div>
                             <h1 style="color:#dc2626; margin:0; font-size: 28px; font-weight: 800; letter-spacing: -0.5px;">TIBOK Health Registry</h1>
                             <p style="margin:6px 0 0 0; color:#64748b; font-size:14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">${reportTitle}</p>
@@ -1136,9 +1136,9 @@
                 let visitsTable = "";
                 if(p.visits && p.visits.length > 0) {
                     visitsTable = `
-                    <table style="width:100%; border-collapse:collapse; font-size:11px; text-align: left; margin-bottom: 10px;">
+                    <table style="width:100%; border-collapse:collapse; font-size:11px; text-align: left;">
                         <thead>
-                            <tr style="background:#f1f5f9; color:#475569; border-bottom: 2px solid #cbd5e1;">
+                            <tr class="avoid-break" style="background:#f1f5f9; color:#475569; border-bottom: 2px solid #cbd5e1;">
                                 <th style="padding:10px 8px; font-weight: 700; text-transform: uppercase;">Date</th>
                                 <th style="padding:10px 8px; font-weight: 700; text-transform: uppercase;">Type</th>
                                 <th style="padding:10px 8px; font-weight: 700; text-transform: uppercase;">Vitals</th>
@@ -1147,7 +1147,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                        ${p.visits.slice(0, 10).map((v, i) => {
+                        ${p.visits.slice(0, 8).map((v, i) => {
                             let vBmi = "N/A";
                             if (v.height > 0 && v.weight > 0) {
                                 vBmi = (v.weight / Math.pow(v.height/100, 2)).toFixed(1);
@@ -1162,7 +1162,7 @@
                                     <span style="color:#dc2626; font-weight:800;">BP: ${v.avg}</span><br>
                                     <span style="color:#64748b; font-size: 10px;">BMI: ${vBmi}</span>
                                 </td>
-                                <td style="padding:12px 8px; color: #334155; vertical-align: top;">${vMeds}</td>
+                                <td style="padding:12px 8px; color: #334155; vertical-align: top; max-width: 150px;">${vMeds}</td>
                                 <td style="padding:12px 8px; color: #334155; vertical-align: top; line-height: 1.4;">
                                     ${v.notes || 'No notes.'}<br>
                                     <span style="color:#94a3b8; font-size:10px; font-weight: 600;">- ${v.assessed_by || 'N/A'}</span>
@@ -1272,16 +1272,16 @@
             fullHtml += `</div>`;
 
             const opt = {
-                margin:       [15, 10, 15, 10], // Top, Right, Bottom, Left margins
+                margin:       10, 
                 filename:     filename,
                 image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2, useCORS: true, logging: false },
+                html2canvas:  { scale: 2, useCORS: true, letterRendering: true, logging: false },
                 jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
-                pagebreak:    { mode: ['css', 'legacy'] } 
+                pagebreak:    { mode: ['css', 'legacy'], avoid: ['tr', '.avoid-break'] }
             };
             
             html2pdf().set(opt).from(fullHtml).save().then(() => {
-                loader.classList.remove('active'); // Hide the loading screen
+                loader.classList.remove('active');
             }).catch(err => {
                 console.error(err);
                 loader.classList.remove('active');
