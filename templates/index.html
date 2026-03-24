@@ -178,6 +178,8 @@
     .page { display:none; animation: fadeIn 0.3s ease;} 
     .page.active { display:block; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    /* 🟢 ANIMATION FOR LOADING OVERLAY */
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
     table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 15px;}
     th, td { padding: 14px; text-align: left; border-bottom: 1px solid var(--border); }
@@ -305,6 +307,14 @@
      </div>
   </div>
 
+  <div class="modal-overlay" id="loadingModal" style="z-index: 999999; background: rgba(15,23,42,0.8); backdrop-filter: blur(8px);">
+     <div class="modal-box" style="text-align: center; max-width: 320px; padding: 40px 20px; background: var(--bg); border: 1px solid var(--border);">
+         <div style="border: 5px solid var(--surface2); border-top: 5px solid var(--primary); border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 0 auto 20px;"></div>
+         <h2 style="font-weight: 900; color: var(--text); font-size: 20px; margin-bottom: 8px;">Generating PDF...</h2>
+         <p style="color: var(--muted); font-size: 14px; font-weight: 600; line-height: 1.5;">Securely fetching live records from MongoDB Atlas.</p>
+     </div>
+  </div>
+
  <div class="app" id="app">
   <aside class="sidebar" id="sidebar">
     <div class="brand">
@@ -383,7 +393,6 @@
             <div style="display:flex; align-items:center; gap:12px;">
                 <h3>Patient Directory</h3><span class="pill" style="background:var(--bg)"><span id="shownCount">0</span> records</span>
             </div>
-            
             <div style="display:flex; align-items:center; gap:12px; flex-wrap: wrap;">
                 <button class="btn" onclick="openExportModal()" style="padding: 14px 16px;">📥 Export Data</button>
                 <button id="dashAddPatientBtn" class="btn primary" style="margin:0;">➕ Register Patient</button>
@@ -1046,9 +1055,13 @@
             return;
         }
 
-        alert("Fetching official data from the server. Please wait a moment...");
+        // Close the export menu and show the beautiful loading overlay
+        closeExportModal();
+        const loader = document.getElementById('loadingModal');
+        loader.classList.add('active');
 
         try {
+            // Fetch live from MongoDB Atlas
             const response = await fetch('/api/data');
             const serverPatients = await response.json();
 
@@ -1073,12 +1086,10 @@
             }
 
             if (targetPatients.length === 0) {
+                loader.classList.remove('active');
                 alert("No patients found for this selection on the server.");
                 return;
             }
-
-            // Close the modal if it's open
-            closeExportModal();
 
             targetPatients.sort((a, b) => {
                 let pA = a.purok || "";
@@ -1087,8 +1098,9 @@
                 return (a.lastName || "").localeCompare(b.lastName || "");
             });
 
+            // Build PDF HTML
             let fullHtml = `
-                <div id="pdf-export-content" style="font-family: Helvetica, Arial, sans-serif; color: #000; background: #fff; padding: 30px; width: 800px; margin: 0 auto;">
+                <div id="pdf-export-content" style="font-family: Helvetica, Arial, sans-serif; color: #000; background: #fff; padding: 30px; width: 800px; margin: 0 auto; box-sizing: border-box;">
                     <div style="text-align:center; border-bottom:3px solid #dc2626; padding-bottom:15px; margin-bottom:25px;">
                         <h1 style="color:#dc2626; margin:0; font-size: 24px; font-weight: 900; letter-spacing: -0.5px;">TIBOK Health Registry</h1>
                         <p style="margin:5px 0 0 0; color:#64748b; font-size:12px; font-weight: 600; text-transform: uppercase;">${reportTitle}</p>
@@ -1168,7 +1180,7 @@
                 fullHtml += `
                     <div style="margin-bottom: 10px;">
                         <h2 style="margin: 0 0 3px 0; font-size: 18px; font-weight: 900;">${index + 1}. ${p.lastName}, ${p.firstName} ${p.middleName || ''}</h2>
-                        <p style="margin: 0; color: #64748b; font-size: 12px; font-weight: 600;">ID: ${p.id}  |  Status: ${p.status}  |  Purok: ${p.purok || 'N/A'}</p>
+                        <p style="margin: 0; color: #64748b; font-size: 12px; font-weight: 600;">ID: ${p.id} &nbsp;|&nbsp; Status: ${p.status} &nbsp;|&nbsp; Purok: ${p.purok || 'N/A'}</p>
                     </div>
                     
                     <table style="width:100%; border-collapse:collapse; margin-bottom:15px; font-size:12px;">
@@ -1197,19 +1209,24 @@
 
             fullHtml += `</div>`;
 
+            // 🟢 THE FIX FOR BLANK PDF: 
+            // We append it to the body so it physically exists on the screen,
+            // BUT we put it UNDER the loading overlay so the user only sees the spinner.
             const container = document.createElement("div");
+            container.id = "pdf-export-container";
             container.innerHTML = fullHtml;
             container.style.position = "absolute";
             container.style.top = "0";
             container.style.left = "0";
-            container.style.zIndex = "-1000"; 
-            container.style.opacity = "0"; 
-            container.style.pointerEvents = "none";
+            container.style.width = "800px"; 
+            container.style.background = "#ffffff";
+            container.style.zIndex = "999998"; // Right below the loading overlay (999999)
             
             document.body.appendChild(container);
 
+            // Wait a few frames to guarantee the browser rendering engine has fully drawn the HTML
             await new Promise(r => requestAnimationFrame(r));
-            await new Promise(r => setTimeout(r, 100));
+            await new Promise(r => setTimeout(r, 400));
 
             const opt = {
                 margin:       [10, 10, 10, 10], 
@@ -1218,23 +1235,19 @@
                 html2canvas:  { 
                     scale: 2, 
                     useCORS: true,
-                    onclone: function(clonedDoc) {
-                        const el = clonedDoc.getElementById('pdf-export-content');
-                        if (el) {
-                            el.parentElement.style.opacity = "1";
-                            el.parentElement.style.position = "relative";
-                            el.parentElement.style.zIndex = "9999";
-                        }
-                    }
+                    logging: false
                 },
                 jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
             
+            // Generate PDF and instantly clean up
             html2pdf().set(opt).from(container).save().then(() => {
                 document.body.removeChild(container);
+                loader.classList.remove('active'); // Hide the loading screen
             });
 
         } catch (error) {
+            loader.classList.remove('active');
             alert("Error fetching data from the server. Please try again.");
             console.error(error);
         }
@@ -1623,11 +1636,11 @@
               
               const summary = document.createElement("summary");
               summary.innerHTML = `
-                <div style="display:flex; align-items:center; gap: 12px; width: 100%;">
+                <div style="display:flex; align-items:center; gap: 12px;">
                     <span style="font-size: 22px;">📁</span>
                     <span style="font-weight: 900; font-size: 18px; color: var(--text);">${groupName}</span>
-                    <span class="pill" style="background: var(--bg); border: 1px solid var(--border); font-weight: 800; color: var(--muted); padding: 4px 12px; border-radius: 999px;">${groups[groupName].length}</span>
                 </div>
+                <span class="pill" style="background: var(--bg); border: 1px solid var(--border); font-weight: 800; color: var(--muted); padding: 4px 12px; border-radius: 999px;">${groups[groupName].length}</span>
               `;
               
               const content = document.createElement("div");
