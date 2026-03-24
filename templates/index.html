@@ -1058,7 +1058,7 @@
       if(navigator.onLine) { fetch('/api/log_visit', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) }).then(() => { loadData(); switchPage('dashboard'); }); } else { saveToQueue('log_visit', data); switchPage('dashboard'); }
     });
 
-    // 🟢 PDF GENERATOR: Fixed Crash Issue + Formatted Data
+    // 🟢 PDF GENERATOR: Fixed "Scroll Bug" + Force Visible Render
     window.generateRegistryPDF = async function(mode, payload) {
         if (!navigator.onLine) {
             alert("⚠️ Export Failed: You are offline.\n\nExporting requires an active internet connection to pull the true, up-to-date records directly from the secure database.");
@@ -1111,7 +1111,7 @@
                 return (a.lastName || "").localeCompare(b.lastName || "");
             });
 
-            // NO EMOJIS HERE. Emojis crash the PDF engine.
+            // NO EMOJIS HERE.
             let fullHtml = `
                 <div style="font-family: Helvetica, Arial, sans-serif; color: #000; background: #fff; padding: 20px; width: 100%; box-sizing: border-box;">
                     <div style="text-align:center; border-bottom:3px solid #dc2626; padding-bottom:15px; margin-bottom:25px;">
@@ -1237,6 +1237,7 @@
 
             fullHtml += `</div>`;
 
+            // 🟢 CRITICAL SCROLL BUG FIX
             const container = document.createElement("div");
             container.id = "pdf-export-container";
             container.innerHTML = fullHtml;
@@ -1244,31 +1245,42 @@
             container.style.top = "0";
             container.style.left = "0";
             container.style.width = "800px"; 
-            container.style.background = "#ffffff";
-            container.style.zIndex = "100"; // Behind the loader which is 999999
-            container.style.opacity = "1"; // MUST be 1 or html2canvas creates a blank box
-            container.style.pointerEvents = "none";
+            container.style.backgroundColor = "#ffffff";
+            container.style.color = "#000000";
+            container.style.zIndex = "999998"; // Keeps it behind the loading modal
             
+            // 1. Temporarily scroll the window to the very top to prevent blank capture
+            const originalScrollY = window.scrollY;
+            window.scrollTo(0, 0);
+
             document.body.appendChild(container);
 
             await new Promise(r => requestAnimationFrame(r));
-            await new Promise(r => setTimeout(r, 300)); 
+            await new Promise(r => setTimeout(r, 400)); 
 
             const opt = {
                 margin:       10, 
                 filename:     filename,
                 image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2, useCORS: true, logging: false },
+                html2canvas:  { 
+                    scale: 2, 
+                    useCORS: true, 
+                    logging: false,
+                    scrollY: 0, // 2. Force the canvas engine to start at Y: 0
+                    scrollX: 0
+                },
                 jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
             
             html2pdf().set(opt).from(container).save().then(() => {
                 if(document.body.contains(container)) document.body.removeChild(container);
                 loader.classList.remove('active');
+                window.scrollTo(0, originalScrollY); // 3. Restore the user's scroll position
             }).catch(err => {
                 console.error(err);
                 if(document.body.contains(container)) document.body.removeChild(container);
                 loader.classList.remove('active');
+                window.scrollTo(0, originalScrollY);
                 alert("PDF generation failed unexpectedly. Please try again.");
             });
 
