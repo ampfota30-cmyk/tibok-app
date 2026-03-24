@@ -54,7 +54,7 @@ except Exception as e:
     print(f"Database connection failed: {e}")
 
 # ==========================================
-# 🔒 AUTHENTICATION
+# AUTHENTICATION
 # ==========================================
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -81,7 +81,7 @@ def logout():
     return redirect('/login')
 
 # ==========================================
-# 📱 APP CORE API
+# APP CORE API
 # ==========================================
 @app.route('/')
 @app.route('/mobile')
@@ -136,6 +136,9 @@ def get_data():
                 "date": str(v.get("visit_date", "Unknown")), 
                 "title": v.get("visit_type", "Visit"),
                 "avg": avg_val, 
+                "height": float(v.get("height", 0) or 0),
+                "weight": float(v.get("weight", 0) or 0),
+                "medications": v.get("medications", []),
                 "notes": visit_note, 
                 "assessed_by": str(v.get("assessed_by", "Unknown"))
             })
@@ -155,7 +158,7 @@ def get_data():
             "contact": p.get("contact_number", ""), 
             "status": p.get("status", "Active"),
             "notes": p.get("notes", ""), 
-            "medications": p.get("medications", []), # 🟢 Added medications array
+            "medications": p.get("medications", []), 
             "bp": bp_list, 
             "visits": visit_list,
             "lastUpdated": p.get("last_updated", (p_visits[0].get("visit_date", "New") if p_visits else "New"))
@@ -167,7 +170,7 @@ def get_data():
 def add_patient():
     data = request.json
     pid = data.get("patientId")
-    timestamp = datetime.now(PHT).strftime("%Y-%m-%d %I:%M %p") # 🟢 Accurate PHT Format
+    timestamp = datetime.now(PHT).strftime("%Y-%m-%d %I:%M %p") 
     notes = data.get("notes", "")
 
     new_doc = {
@@ -186,7 +189,7 @@ def add_patient():
         "weight": float(data.get("weight", 0) or 0),
         "contact_number": data.get("contact"), 
         "notes": notes, 
-        "medications": data.get("medications", []), # 🟢 Save Meds array
+        "medications": data.get("medications", []), 
         "last_updated": timestamp
     }
     patients_col.update_one({"patient_id": pid}, {"$set": new_doc}, upsert=True)
@@ -198,6 +201,9 @@ def add_patient():
             "visit_date": timestamp, 
             "visit_type": "Initial Registration",
             "blood_pressure": { "sys_1": int(sys_val), "dia_1": int(dia_val), "avg_bp": f"{sys_val}/{dia_val}" },
+            "height": float(data.get("height", 0) or 0),
+            "weight": float(data.get("weight", 0) or 0),
+            "medications": data.get("medications", []),
             "notes": notes if notes.strip() else "Baseline BP taken during registration.",
             "assessed_by": data.get("assessedBy") or "System Admin"
         })
@@ -209,22 +215,27 @@ def log_visit():
     data = request.json
     pid = data.get("patientId")
     sys_val, dia_val = data.get("sys"), data.get("dia")
-    timestamp = datetime.now(PHT).strftime("%Y-%m-%d %I:%M %p") # 🟢 Accurate PHT Format
+    timestamp = datetime.now(PHT).strftime("%Y-%m-%d %I:%M %p") 
 
+    # We now save height, weight, and medications explicitly inside the Visit log!
     new_visit = {
         "patient_id": pid, 
         "visit_date": timestamp, 
         "visit_type": data.get("visitType"),
         "blood_pressure": { "sys_1": int(sys_val) if sys_val else 0, "dia_1": int(dia_val) if dia_val else 0, "avg_bp": f"{sys_val}/{dia_val}" if sys_val else "N/A" },
+        "height": float(data.get("height", 0) or 0),
+        "weight": float(data.get("weight", 0) or 0),
+        "medications": data.get("medications", []),
         "notes": data.get("notes", ""), 
         "assessed_by": data.get("assessedBy") or "Unknown BHW"
     }
     visits_col.insert_one(new_visit)
     
+    # Also update the patient's main profile
     update_fields = {"last_updated": timestamp}
     if data.get("height"): update_fields["height"] = float(data.get("height"))
     if data.get("weight"): update_fields["weight"] = float(data.get("weight"))
-    if "medications" in data: update_fields["medications"] = data.get("medications") # 🟢 Update meds on visit
+    if "medications" in data: update_fields["medications"] = data.get("medications") 
         
     patients_col.update_one({"patient_id": pid}, {"$set": update_fields})
     return jsonify({"status": "success"})
@@ -286,4 +297,5 @@ def reset_password():
 if __name__ == '__main__':
     if not os.path.exists('static'):
         os.makedirs('static')
-    app.run(debug=True, port=5000)
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port, debug=False)
