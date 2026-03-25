@@ -186,9 +186,10 @@
     th, td { padding: 14px; text-align: left; border-bottom: 1px solid var(--border); }
     th { font-weight: 800; color: var(--muted); text-transform: uppercase; font-size: 13px;}
     
+    /* 🟢 SCROLL FIX FOR MOBILE MODAL */
     .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(16,24,40,0.6); backdrop-filter: blur(4px); z-index: 100000; display: none; place-items: center; padding: 20px; opacity:0; transition: opacity 0.2s ease;}
     .modal-overlay.active { display: grid !important; opacity: 1;}
-    .modal-box { background: var(--surface); border-radius: 24px; padding: 32px; width: 100%; max-width: 400px; box-shadow: 0 20px 40px rgba(0,0,0,0.3); transform: scale(0.95); transition: all 0.2s ease; border: 1px solid var(--border);}
+    .modal-box { background: var(--surface); border-radius: 24px; padding: 32px; width: 100%; max-width: 400px; max-height: 85vh; overflow-y: auto; box-shadow: 0 20px 40px rgba(0,0,0,0.3); transform: scale(0.95); transition: all 0.2s ease; border: 1px solid var(--border);}
     .modal-overlay.active .modal-box { transform: scale(1); }
     .danger-icon { width: 72px; height: 72px; border-radius: 50%; background: var(--danger-bg); color: var(--danger); display: grid; place-items: center; font-size: 32px; margin: 0 auto 20px; box-shadow: 0 0 0 8px rgba(239,68,68,0.05);}
     
@@ -247,7 +248,7 @@
   </div>
 
   <div class="modal-overlay" id="exportModal" onclick="if(event.target===this) closeExportModal()">
-    <div class="modal-box" style="text-align: left; max-width: 500px; padding: 32px 24px; max-height: 85vh; overflow-y: auto;">
+    <div class="modal-box" style="text-align: left; max-width: 500px; padding: 32px 24px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
             <h3 style="margin:0; font-weight:900; font-size: 20px;">📥 Export Data to PDF</h3>
             <button onclick="closeExportModal()" style="background:var(--surface2); border:1px solid var(--border); color:var(--text); width:32px; height:32px; border-radius:8px; cursor:pointer; font-weight:bold;">✕</button>
@@ -1111,9 +1112,9 @@
                 return (a.lastName || "").localeCompare(b.lastName || "");
             });
 
-            // Container fixed to 750px so it fits A4 perfectly
+            // Container fixed to 800px so it forces the mobile engine to render a desktop width
             let fullHtml = `
-                <div style="width: 750px; padding: 0; margin: 0 auto; font-family: Helvetica, Arial, sans-serif; color: #0f172a; background: #ffffff;">
+                <div style="width: 800px; padding: 0; margin: 0 auto; font-family: Helvetica, Arial, sans-serif; color: #0f172a; background: #ffffff;">
                     <style>
                         .avoid-break { page-break-inside: avoid !important; break-inside: avoid !important; display: block; }
                         tr { page-break-inside: avoid !important; break-inside: avoid !important; }
@@ -1121,9 +1122,18 @@
                         * { box-sizing: border-box; }
                     </style>
                     <div style="border-bottom: 2px solid #dc2626; padding-bottom: 15px; margin-bottom: 20px;">
-                        <h1 style="color:#dc2626; margin:0 0 5px 0; font-size: 26px;">TIBOK Health Registry</h1>
-                        <p style="margin:0; color:#64748b; font-size:12px; text-transform: uppercase;">${reportTitle}</p>
-                        <p style="margin:5px 0 0 0; color:#64748b; font-size:10px;">Generated: ${new Date().toLocaleString('en-US', {timeZone: 'Asia/Manila'})} | Records: ${targetPatients.length}</p>
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <tr>
+                                <td style="text-align: left; vertical-align: bottom;">
+                                    <h1 style="color:#dc2626; margin:0 0 5px 0; font-size: 26px;">TIBOK Health Registry</h1>
+                                    <p style="margin:0; color:#64748b; font-size:12px; font-weight: bold; text-transform: uppercase;">${reportTitle}</p>
+                                </td>
+                                <td style="text-align: right; vertical-align: bottom;">
+                                    <p style="margin:0; color:#64748b; font-size:10px;">Generated: ${new Date().toLocaleString('en-US', {timeZone: 'Asia/Manila'})}</p>
+                                    <p style="margin:5px 0 0 0; color:#0f172a; font-size:12px; font-weight: bold;">Total Records: ${targetPatients.length}</p>
+                                </td>
+                            </tr>
+                        </table>
                     </div>
             `;
 
@@ -1279,8 +1289,9 @@
 
             fullHtml += `</div>`;
 
+            // 🟢 EXACT FIX: We pass the string AND strictly force a desktop viewport size
             const opt = {
-                margin:       10, // mm
+                margin:       0.5, 
                 filename:     filename,
                 image:        { type: 'jpeg', quality: 1.0 },
                 html2canvas:  { 
@@ -1289,8 +1300,7 @@
                     logging: false,
                     windowWidth: 800 // The magic fix for mobile cutoff when using string method
                 },
-                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
-                pagebreak:    { mode: ['css', 'legacy'], avoid: ['.avoid-break', 'tr'] }
+                jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
             };
             
             html2pdf().set(opt).from(fullHtml).save().then(() => {
