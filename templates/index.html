@@ -185,6 +185,7 @@
     th, td { padding: 14px; text-align: left; border-bottom: 1px solid var(--border); }
     th { font-weight: 800; color: var(--muted); text-transform: uppercase; font-size: 13px;}
     
+    /* 🟢 MOBILE SCROLL FIX FOR MODAL */
     .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(16,24,40,0.6); backdrop-filter: blur(4px); z-index: 100000; display: none; place-items: center; padding: 20px; opacity:0; transition: opacity 0.2s ease;}
     .modal-overlay.active { display: grid !important; opacity: 1;}
     .modal-box { background: var(--surface); border-radius: 24px; padding: 32px; width: 100%; max-width: 400px; max-height: 85vh; overflow-y: auto; box-shadow: 0 20px 40px rgba(0,0,0,0.3); transform: scale(0.95); transition: all 0.2s ease; border: 1px solid var(--border);}
@@ -246,7 +247,7 @@
   </div>
 
   <div class="modal-overlay" id="exportModal" onclick="if(event.target===this) closeExportModal()">
-    <div class="modal-box" style="text-align: left; max-width: 500px; padding: 32px 24px;">
+    <div class="modal-box" style="text-align: left; max-width: 500px; padding: 32px 24px; max-height: 85vh; overflow-y: auto;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
             <h3 style="margin:0; font-weight:900; font-size: 20px;">📥 Export Data to PDF</h3>
             <button onclick="closeExportModal()" style="background:var(--surface2); border:1px solid var(--border); color:var(--text); width:32px; height:32px; border-radius:8px; cursor:pointer; font-weight:bold;">✕</button>
@@ -1057,6 +1058,7 @@
       if(navigator.onLine) { fetch('/api/log_visit', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) }).then(() => { loadData(); switchPage('dashboard'); }); } else { saveToQueue('log_visit', data); switchPage('dashboard'); }
     });
 
+    // 🟢 100% STRING METHOD (PREVENTS BLANK PAGES) + STRICT PIXEL WIDTH (PREVENTS MOBILE SQUISHING)
     window.generateRegistryPDF = async function(mode, payload) {
         if (!navigator.onLine) {
             alert("⚠️ Export Failed: You are offline.\\n\\nExporting requires an active internet connection to pull the true, up-to-date records directly from the secure database.");
@@ -1109,13 +1111,29 @@
                 return (a.lastName || "").localeCompare(b.lastName || "");
             });
 
-            // EXACT V2 CODE + BMI/Meds injected
+            // 🟢 STRICT 720PX WIDTH: 720px is exactly the printable area of an A4 page with 0.5-inch margins.
+            // By completely removing % widths, mobile phones CANNOT squish the layout.
             let fullHtml = `
-                <div style="font-family: Helvetica, Arial, sans-serif; color: #000; background: #fff; padding: 20px; width: 100%; box-sizing: border-box;">
-                    <div style="text-align:center; border-bottom:3px solid #dc2626; padding-bottom:15px; margin-bottom:25px;">
-                        <h1 style="color:#dc2626; margin:0; font-size: 24px; font-weight: 900; letter-spacing: -0.5px;">TIBOK Health Registry</h1>
-                        <p style="margin:5px 0 0 0; color:#64748b; font-size:12px; font-weight: 600; text-transform: uppercase;">${reportTitle}</p>
-                        <p style="margin:5px 0 0 0; color:#64748b; font-size:10px;">Generated: ${new Date().toLocaleString('en-US', {timeZone: 'Asia/Manila'})} | Records: ${targetPatients.length}</p>
+                <div style="width: 720px; padding: 0; margin: 0 auto; font-family: Helvetica, Arial, sans-serif; color: #0f172a; background: #ffffff;">
+                    <style>
+                        .avoid-break { page-break-inside: avoid !important; break-inside: avoid !important; display: block; }
+                        tr { page-break-inside: avoid !important; break-inside: avoid !important; }
+                        td, th { word-wrap: break-word; overflow-wrap: break-word; }
+                        * { box-sizing: border-box; }
+                    </style>
+                    <div style="border-bottom: 2px solid #dc2626; padding-bottom: 15px; margin-bottom: 20px;">
+                        <table style="width: 720px; border-collapse: collapse;">
+                            <tr>
+                                <td style="width: 420px; text-align: left; vertical-align: bottom;">
+                                    <h1 style="color:#dc2626; margin:0 0 5px 0; font-size: 26px;">TIBOK Health Registry</h1>
+                                    <p style="margin:0; color:#64748b; font-size:12px; font-weight: bold; text-transform: uppercase;">${reportTitle}</p>
+                                </td>
+                                <td style="width: 300px; text-align: right; vertical-align: bottom;">
+                                    <p style="margin:0; color:#64748b; font-size:10px;">Generated: ${new Date().toLocaleString('en-US', {timeZone: 'Asia/Manila'})}</p>
+                                    <p style="margin:5px 0 0 0; color:#0f172a; font-size:12px; font-weight: bold;">Total Records: ${targetPatients.length}</p>
+                                </td>
+                            </tr>
+                        </table>
                     </div>
             `;
 
@@ -1125,49 +1143,54 @@
                 let visitsTable = "";
                 if(p.visits && p.visits.length > 0) {
                     visitsTable = `
-                    <table style="width:100%; border-collapse:collapse; font-size:11px; margin-top:10px;">
-                        <tr style="background:#dc2626; color:#fff;">
-                            <th style="padding:6px; text-align:left; border:1px solid #b91c1c;">Date</th>
-                            <th style="padding:6px; text-align:left; border:1px solid #b91c1c;">Type</th>
-                            <th style="padding:6px; text-align:left; border:1px solid #b91c1c;">Vitals/BMI</th>
-                            <th style="padding:6px; text-align:left; border:1px solid #b91c1c;">Medications</th>
-                            <th style="padding:6px; text-align:left; border:1px solid #b91c1c;">Notes / By</th>
-                        </tr>
-                        ${p.visits.slice(0, 10).map(v => {
+                    <table style="width: 720px; border-collapse:collapse; font-size:11px; text-align: left; margin-bottom: 20px; table-layout: fixed;">
+                        <thead>
+                            <tr class="avoid-break" style="background:#f1f5f9; color:#475569; border-bottom: 2px solid #cbd5e1;">
+                                <th style="width: 80px; padding:8px;">Date</th>
+                                <th style="width: 110px; padding:8px;">Type</th>
+                                <th style="width: 110px; padding:8px;">Vitals/BMI</th>
+                                <th style="width: 220px; padding:8px;">Medications</th>
+                                <th style="width: 200px; padding:8px;">Notes/By</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        ${p.visits.slice(0, 10).map((v, i) => {
                             let vBmi = "N/A";
                             if (v.height > 0 && v.weight > 0) {
                                 vBmi = (v.weight / Math.pow(v.height/100, 2)).toFixed(1);
                             }
                             let vMeds = (v.medications && v.medications.length > 0) ? v.medications.join(", ") : "--";
+                            let rowBg = i % 2 === 0 ? "#ffffff" : "#f8fafc";
                             return `
-                            <tr>
-                                <td style="padding:6px; border:1px solid #ccc; white-space:nowrap;">${v.date.split(" ")[0]}</td>
-                                <td style="padding:6px; border:1px solid #ccc;">${v.title}</td>
-                                <td style="padding:6px; border:1px solid #ccc; white-space:nowrap;">
-                                    <span style="font-weight:bold; color:#dc2626;">BP: ${v.avg}</span><br>
-                                    <span style="color:#64748b;">BMI: ${vBmi}</span>
+                            <tr class="avoid-break" style="background: ${rowBg}; border-bottom: 1px solid #e2e8f0;">
+                                <td style="padding:10px 8px; vertical-align: top; font-weight:bold;">${v.date.split(" ")[0]}</td>
+                                <td style="padding:10px 8px; vertical-align: top;">${v.title}</td>
+                                <td style="padding:10px 8px; vertical-align: top;">
+                                    <span style="color:#dc2626; font-weight:bold;">BP: ${v.avg}</span><br>
+                                    <span style="color:#64748b; font-size: 9px;">BMI: ${vBmi}</span>
                                 </td>
-                                <td style="padding:6px; border:1px solid #ccc;">${vMeds}</td>
-                                <td style="padding:6px; border:1px solid #ccc;">
+                                <td style="padding:10px 8px; vertical-align: top;">${vMeds}</td>
+                                <td style="padding:10px 8px; vertical-align: top; line-height: 1.4;">
                                     ${v.notes || 'No notes.'}<br>
-                                    <i style="color:#64748b; font-size:9px;">- ${v.assessed_by || 'N/A'}</i>
+                                    <span style="color:#94a3b8; font-size:9px;">- ${v.assessed_by || 'N/A'}</span>
                                 </td>
                             </tr>
                             `;
                         }).join('')}
+                        </tbody>
                     </table>`;
-                } else { visitsTable = "<p style='font-size:11px; color:#64748b;'>No clinical visits recorded.</p>"; }
+                } else { visitsTable = "<p class='avoid-break' style='font-size:11px; color:#64748b;'>No clinical visits recorded.</p>"; }
 
                 let bmiDisplay = "N/A";
                 if(p.height > 0 && p.weight > 0) {
                     let heightM = p.height / 100;
                     let bmi = (p.weight / (heightM * heightM)).toFixed(1);
-                    bmiDisplay = `${bmi} - H: ${p.height}cm | W: ${p.weight}kg`;
+                    bmiDisplay = `${bmi} (H: ${p.height}cm, W: ${p.weight}kg)`;
                 } else if (p.height > 0 || p.weight > 0) {
-                    bmiDisplay = `H: ${p.height||'--'}cm | W: ${p.weight||'--'}kg`;
+                    bmiDisplay = `H: ${p.height||'--'}cm, W: ${p.weight||'--'}kg`;
                 }
 
-                let progressReport = "<p style='font-size:11px; color:#64748b;'>Not enough data to calculate trend.</p>";
+                let progressReport = "<p class='avoid-break' style='font-size:11px; color:#64748b;'>Not enough data to calculate trend.</p>";
                 if (p.bp && p.bp.length >= 2) {
                     const baseline = p.bp[0];
                     const current = p.bp[p.bp.length - 1];
@@ -1176,25 +1199,25 @@
                     
                     let trend = "Stable";
                     let tColor = "#64748b";
-                    if (sysDiff <= -10 || diaDiff <= -10) { trend = "Improved"; tColor = "#10b981"; }
-                    else if (sysDiff < 0 || diaDiff < 0) { trend = "Slightly Improved"; tColor = "#10b981"; }
-                    else if (sysDiff >= 15 || diaDiff >= 10) { trend = "Significantly Elevated"; tColor = "#ef4444"; }
-                    else if (sysDiff > 0 || diaDiff > 0) { trend = "Slightly Elevated"; tColor = "#f59e0b"; }
+                    if (sysDiff <= -10 || diaDiff <= -10) { trend = "Improved"; tColor = "#059669"; }
+                    else if (sysDiff < 0 || diaDiff < 0) { trend = "Slightly Improved"; tColor = "#059669"; }
+                    else if (sysDiff >= 15 || diaDiff >= 10) { trend = "Significantly Elevated"; tColor = "#dc2626"; }
+                    else if (sysDiff > 0 || diaDiff > 0) { trend = "Slightly Elevated"; tColor = "#d97706"; }
 
                     progressReport = `
-                        <table style="width:100%; border-collapse:collapse; margin-bottom:10px; font-size:11px; text-align:center;">
+                        <table class="avoid-break" style="width: 720px; border-collapse:collapse; margin-bottom:20px; font-size:11px; text-align:center; border: 1px solid #e2e8f0; table-layout: fixed;">
                             <tr>
-                                <td style="padding:6px; border:1px solid #ccc; background:#f8fafc; width: 33%;">
-                                    <div style="color:#64748b; text-transform:uppercase; font-weight:bold;">Baseline (${baseline.date.split(" ")[0]})</div>
-                                    <div style="font-size:14px; font-weight:bold; margin-top:2px;">${baseline.sys} / ${baseline.dia}</div>
+                                <td style="width: 240px; padding:10px; border-right:1px solid #e2e8f0; background:#f8fafc;">
+                                    <div style="color:#64748b; font-size: 9px; text-transform:uppercase; font-weight:bold; margin-bottom:4px;">Baseline</div>
+                                    <div style="font-size:14px; font-weight:bold; color: #0f172a;">${baseline.sys}/${baseline.dia}</div>
                                 </td>
-                                <td style="padding:6px; border:1px solid #ccc; background:#f8fafc; width: 33%;">
-                                    <div style="color:#64748b; text-transform:uppercase; font-weight:bold;">Current (${current.date.split(" ")[0]})</div>
-                                    <div style="font-size:14px; font-weight:bold; margin-top:2px;">${current.sys} / ${current.dia}</div>
+                                <td style="width: 240px; padding:10px; border-right:1px solid #e2e8f0; background:#f8fafc;">
+                                    <div style="color:#64748b; font-size: 9px; text-transform:uppercase; font-weight:bold; margin-bottom:4px;">Current</div>
+                                    <div style="font-size:14px; font-weight:bold; color: #0f172a;">${current.sys}/${current.dia}</div>
                                 </td>
-                                <td style="padding:6px; border:1px solid #ccc; background:#ffffff; width: 33%;">
-                                    <div style="color:#64748b; text-transform:uppercase; font-weight:bold;">Overall Trend</div>
-                                    <div style="font-weight:bold; color:${tColor}; font-size:12px; margin-top:2px;">${trend}</div>
+                                <td style="width: 240px; padding:10px; background:#fff;">
+                                    <div style="color:#64748b; font-size: 9px; text-transform:uppercase; font-weight:bold; margin-bottom:4px;">Trend</div>
+                                    <div style="font-size:12px; font-weight:bold; color:${tColor};">${trend}</div>
                                 </td>
                             </tr>
                         </table>
@@ -1204,44 +1227,85 @@
                 if (index > 0) { fullHtml += `<div class="html2pdf__page-break"></div>`; }
 
                 fullHtml += `
-                    <div style="margin-bottom: 10px;">
-                        <h2 style="margin: 0 0 3px 0; font-size: 18px; font-weight: 900;">${index + 1}. ${p.lastName}, ${p.firstName} ${p.middleName || ''}</h2>
-                        <p style="margin: 0; color: #64748b; font-size: 12px; font-weight: 600;">ID: ${p.id} | Status: ${p.status} | Purok: ${p.purok || 'N/A'}</p>
+                    <div class="avoid-break" style="margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px dashed #cbd5e1;">
+                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; margin-bottom: 16px; width: 720px;">
+                            <table style="width: 720px; border-collapse: collapse; margin-bottom: 8px;">
+                                <tr>
+                                    <td style="width: 520px; text-align: left;">
+                                        <h2 style="margin: 0; font-size: 18px; font-weight: bold; color: #0f172a;">${index + 1}. ${p.lastName}, ${p.firstName} ${p.middleName || ''}</h2>
+                                    </td>
+                                    <td style="width: 200px; text-align: right;">
+                                        <span style="background: #d1fae5; color: #047857; padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; border: 1px solid #34d399;">${p.status || 'ACTIVE'}</span>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <table style="width: 720px; font-size: 11px; line-height: 1.5; table-layout: fixed;">
+                                <tr>
+                                    <td style="width: 120px; color: #64748b; padding: 2px 0;">Patient ID:</td>
+                                    <td style="width: 240px; font-weight: bold; color: #0f172a; padding: 2px 0;">${p.id}</td>
+                                    <td style="width: 120px; color: #64748b; padding: 2px 0;">Location:</td>
+                                    <td style="width: 240px; font-weight: bold; color: #0f172a; padding: 2px 0;">Purok ${p.purok || 'N/A'}</td>
+                                </tr>
+                                <tr>
+                                    <td style="color: #64748b; padding: 2px 0;">Age/Sex:</td>
+                                    <td style="font-weight: bold; color: #0f172a; padding: 2px 0;">${p.age} yrs / ${p.sex}</td>
+                                    <td style="color: #64748b; padding: 2px 0;">Contact:</td>
+                                    <td style="font-weight: bold; color: #0f172a; padding: 2px 0;">${p.contact || 'N/A'}</td>
+                                </tr>
+                                <tr>
+                                    <td style="color: #64748b; padding: 2px 0;">BMI Profile:</td>
+                                    <td colspan="3" style="font-weight: bold; color: #0f172a; padding: 2px 0;">${bmiDisplay}</td>
+                                </tr>
+                            </table>
+                        </div>
+
+                        <table class="avoid-break" style="width: 720px; border-collapse: collapse; margin-bottom: 20px; table-layout: fixed;">
+                            <tr>
+                                <td style="width: 350px; border: 1px solid #fee2e2; background: #fef2f2; padding: 10px; border-radius: 8px; vertical-align: top;">
+                                    <div style="color: #b91c1c; font-size: 10px; text-transform: uppercase; font-weight: bold; margin-bottom: 4px;">Current Medications</div>
+                                    <div style="font-size: 11px; color: #7f1d1d; font-weight: bold;">${medsStr}</div>
+                                </td>
+                                <td style="width: 20px;"></td> <td style="width: 350px; border: 1px solid #e2e8f0; background: #f8fafc; padding: 10px; border-radius: 8px; vertical-align: top;">
+                                    <div style="color: #64748b; font-size: 10px; text-transform: uppercase; font-weight: bold; margin-bottom: 4px;">General Notes</div>
+                                    <div style="font-size: 11px; color: #334155;">${p.notes || 'No general notes recorded.'}</div>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <div class="avoid-break">
+                            <h3 style="font-size: 13px; color: #0f172a; margin: 0 0 8px 0; border-bottom: 2px solid #e2e8f0; padding-bottom: 4px;">Clinical Progress</h3>
+                            ${progressReport}
+                        </div>
+
+                        <div>
+                            <h3 class="avoid-break" style="font-size: 13px; color: #0f172a; margin: 0 0 8px 0; border-bottom: 2px solid #e2e8f0; padding-bottom: 4px;">Recent Visit History</h3>
+                            ${visitsTable}
+                        </div>
                     </div>
-                    
-                    <table style="width:100%; border-collapse:collapse; margin-bottom:15px; font-size:12px;">
-                        <tr>
-                            <td style="padding:6px; border:1px solid #ccc; width:50%;"><b>Age/Sex:</b> ${p.age} / ${p.sex}</td>
-                            <td style="padding:6px; border:1px solid #ccc; width:50%;"><b>Contact:</b> ${p.contact || 'N/A'}</td>
-                        </tr>
-                        <tr>
-                            <td style="padding:6px; border:1px solid #ccc; background:#f8fafc;" colspan="2"><b>BMI & Measurements:</b> ${bmiDisplay}</td>
-                        </tr>
-                        <tr>
-                            <td style="padding:6px; border:1px solid #ccc; background:#fef2f2; color:#991b1b;" colspan="2"><b>Current Medications:</b> ${medsStr}</td>
-                        </tr>
-                        <tr>
-                            <td style="padding:6px; border:1px solid #ccc; background:#f9fafb;" colspan="2"><b>General Notes:</b> ${p.notes || 'None'}</td>
-                        </tr>
-                    </table>
-
-                    <h3 style="font-size: 13px; color: #dc2626; border-bottom: 1px solid #fee2e2; padding-bottom: 3px; margin-bottom: 8px;">Clinical Progress</h3>
-                    ${progressReport}
-
-                    <h3 style="font-size: 13px; color: #dc2626; border-bottom: 1px solid #fee2e2; padding-bottom: 3px; margin-bottom: 8px; margin-top: 15px;">Recent Visit History</h3>
-                    ${visitsTable}
                 `;
             });
 
             fullHtml += `</div>`;
 
-            // EXACT V2 CONFIGURATION
+            // 🟢 V2 SETTINGS (No invisible containers, no DOM hacks, just pure string passing with 0.5 margins)
+            const isMobile = window.innerWidth < 800;
+            const isHugeReport = targetPatients.length > 5;
+            const renderScale = (isMobile && isHugeReport) ? 1.5 : 2;
+
             const opt = {
-                margin:       10, 
+                margin:       0.5, // Strict 0.5 margin for perfect A4 layout
                 filename:     filename,
                 image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2, useCORS: true, letterRendering: true, logging: false },
-                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                html2canvas:  { 
+                    scale: renderScale, 
+                    useCORS: true, 
+                    logging: false,
+                    windowWidth: 800, // This locks the engine to Desktop mode even on Mobile
+                    width: 800
+                },
+                jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' },
+                pagebreak:    { mode: ['css', 'legacy'], avoid: ['.avoid-break', 'tr'] }
             };
             
             html2pdf().set(opt).from(fullHtml).save().then(() => {
