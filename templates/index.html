@@ -185,7 +185,7 @@
     th, td { padding: 14px; text-align: left; border-bottom: 1px solid var(--border); }
     th { font-weight: 800; color: var(--muted); text-transform: uppercase; font-size: 13px;}
     
-    /* 🟢 MODAL CSS: Allows scrolling on smaller mobile screens */
+    /* 🟢 CRITICAL: Modal max-height and overflow added so it scrolls on small phones */
     .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(16,24,40,0.6); backdrop-filter: blur(4px); z-index: 100000; display: none; place-items: center; padding: 20px; opacity:0; transition: opacity 0.2s ease;}
     .modal-overlay.active { display: grid !important; opacity: 1;}
     .modal-box { background: var(--surface); border-radius: 24px; padding: 32px; width: 100%; max-width: 400px; max-height: 85vh; overflow-y: auto; box-shadow: 0 20px 40px rgba(0,0,0,0.3); transform: scale(0.95); transition: all 0.2s ease; border: 1px solid var(--border);}
@@ -1058,7 +1058,7 @@
       if(navigator.onLine) { fetch('/api/log_visit', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) }).then(() => { loadData(); switchPage('dashboard'); }); } else { saveToQueue('log_visit', data); switchPage('dashboard'); }
     });
 
-    // 🟢 100% STRING METHOD (PREVENTS BLANK PAGES) + WINDOW WIDTH FIX (PREVENTS MOBILE SMUSHING)
+    // 🟢 SMART PDF GENERATOR: Solves Mobile Canvas Crashes & Layout Distortion
     window.generateRegistryPDF = async function(mode, payload) {
         if (!navigator.onLine) {
             alert("⚠️ Export Failed: You are offline.\\n\\nExporting requires an active internet connection to pull the true, up-to-date records directly from the secure database.");
@@ -1111,9 +1111,8 @@
                 return (a.lastName || "").localeCompare(b.lastName || "");
             });
 
-            // Container fixed to 800px so it forces the mobile engine to render a desktop width
             let fullHtml = `
-                <div style="width: 800px; padding: 0; margin: 0 auto; font-family: Helvetica, Arial, sans-serif; color: #0f172a; background: #ffffff;">
+                <div style="width: 800px; padding: 0; margin: 0; font-family: Helvetica, Arial, sans-serif; color: #0f172a; background: #ffffff;">
                     <style>
                         .avoid-break { page-break-inside: avoid !important; break-inside: avoid !important; display: block; }
                         tr { page-break-inside: avoid !important; break-inside: avoid !important; }
@@ -1288,18 +1287,26 @@
 
             fullHtml += `</div>`;
 
-            // 🟢 EXACT FIX: We pass the string AND strictly force a desktop viewport size
+            // 🟢 DYNAMIC MOBILE SCALING FIX
+            // This detects if the user is on a narrow mobile screen. If they are downloading a huge masterfile,
+            // we drop the internal render scale to 1. This prevents iOS/Android memory limits from crashing
+            // the canvas and returning a blank page.
+            const isMobile = window.innerWidth < 800;
+            const isHugeReport = targetPatients.length > 5;
+            const renderScale = (isMobile && isHugeReport) ? 1 : 2;
+
             const opt = {
-                margin:       10, 
+                margin:       0.4, 
                 filename:     filename,
-                image:        { type: 'jpeg', quality: 1.0 },
+                image:        { type: 'jpeg', quality: 0.95 },
                 html2canvas:  { 
-                    scale: 2, 
+                    scale: renderScale, 
                     useCORS: true, 
                     logging: false,
-                    windowWidth: 800 // The magic fix for mobile cutoff when using string method
+                    windowWidth: 800, // Enforces desktop structural layout perfectly on a phone screen
+                    width: 800
                 },
-                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' },
                 pagebreak:    { mode: ['css', 'legacy'], avoid: ['.avoid-break', 'tr'] }
             };
             
