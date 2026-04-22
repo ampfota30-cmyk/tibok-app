@@ -198,6 +198,9 @@
     .meds-category { font-size: 11px; font-weight: 900; color: var(--muted); text-transform: uppercase; margin-bottom: 6px; grid-column: 1 / -1; margin-top: 10px;}
     .meds-category:first-child { margin-top: 0; }
 
+    /* 🟢 SOLID LOADING SCREEN: This perfectly masks the PDF rendering underneath */
+    #loadingModal { background: #0f172a !important; }
+
     @media (max-width: 1024px){ 
         .app { display: flex !important; flex-direction: column; padding: 16px !important; gap: 16px !important;}
         .desktop-only { display: none !important; }
@@ -282,11 +285,11 @@
     </div>
   </div>
 
-  <div class="modal-overlay" id="loadingModal" style="z-index: 999999; background: rgba(15,23,42,0.8); backdrop-filter: blur(8px);">
-     <div class="modal-box" style="text-align: center; max-width: 320px; padding: 40px 20px; background: var(--bg); border: 1px solid var(--border);">
+  <div class="modal-overlay" id="loadingModal">
+     <div class="modal-box" style="text-align: center; max-width: 320px; padding: 40px 20px; background: var(--surface); border: 1px solid var(--border);">
          <div style="border: 5px solid var(--surface2); border-top: 5px solid var(--primary); border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 0 auto 20px;"></div>
          <h2 style="font-weight: 900; color: var(--text); font-size: 20px; margin-bottom: 8px;">Generating PDF...</h2>
-         <p style="color: var(--muted); font-size: 14px; font-weight: 600; line-height: 1.5;">Securely fetching live records from MongoDB Atlas.</p>
+         <p style="color: var(--muted); font-size: 14px; font-weight: 600; line-height: 1.5;">Securely compiling records.</p>
      </div>
   </div>
 
@@ -1105,6 +1108,7 @@
         }
 
         closeExportModal();
+
         const loader = document.getElementById('loadingModal');
         const exportModal = document.getElementById('exportModal');
         const confirmModal = document.getElementById('confirmModal');
@@ -1192,8 +1196,8 @@
                     const heightM = p.height / 100;
                     const bmi = (p.weight / (heightM * heightM)).toFixed(1);
                     bmiDisplay = `${bmi} (H: ${p.height}cm, W: ${p.weight}kg)`;
-                } else if (p.height > 0 || p.weight > 0) {
-                    bmiDisplay = `H: ${p.height || '--'}cm, W: ${p.weight || '--'}kg`;
+                } else if (p.height || p.weight) {
+                    bmiDisplay = `H: ${p.height || 'N/A'}cm, W: ${p.weight || 'N/A'}kg`;
                 }
 
                 let progressReport = `<p style="font-size:11px; color:#64748b;">Not enough data to calculate trend.</p>`;
@@ -1311,8 +1315,8 @@
                                     <td style="font-weight:bold; color:#0f172a; padding:2px 0;">${p.contact || 'N/A'}</td>
                                 </tr>
                                 <tr>
-                                    <td style="color:#64748b; padding:2px 0;">BMI Profile:</td>
-                                    <td colspan="3" style="font-weight:bold; color:#0f172a; padding:2px 0;">${bmiDisplay}</td>
+                                    <td style="color:#64748b; padding:2px 0; border-top:1px solid #e2e8f0;">BMI Profile:</td>
+                                    <td colspan="3" style="font-weight:bold; color:#0f172a; padding:2px 0; border-top:1px solid #e2e8f0;">${bmiDisplay}</td>
                                 </tr>
                             </table>
                         </div>
@@ -1337,7 +1341,7 @@
                         </div>
 
                         <div>
-                            <h3 class="avoid-break" style="font-size:13px; color:#0f172a; margin:0 0 8px 0; border-bottom:2px solid #e2e8f0; padding-bottom:4px;">Recent Visit History</h3>
+                            <h3 class="avoid-break" style="font-size:13px; color:#0f172a; margin:16px 0 8px 0; border-bottom:2px solid #e2e8f0; padding-bottom:4px;">Recent Visit History</h3>
                             ${visitsTable}
                         </div>
                     </div>
@@ -1346,32 +1350,18 @@
 
             fullHtml += `</div>`;
 
-            printWrapper = document.createElement('div');
-            printWrapper.id = 'print-wrapper';
-            printWrapper.style.position = 'absolute';
-            printWrapper.style.left = '0'; 
-            printWrapper.style.top = '0';
-            printWrapper.style.width = '794px';
-            printWrapper.style.minWidth = '794px';
-            printWrapper.style.background = '#ffffff';
-            printWrapper.style.opacity = '0.01'; 
-            printWrapper.style.pointerEvents = 'none';
-            printWrapper.style.zIndex = '-9999'; 
-            printWrapper.innerHTML = fullHtml;
-            document.body.appendChild(printWrapper);
-
             exportModal.classList.remove('active');
             confirmModal.classList.remove('active');
             aboutModal.classList.remove('active');
 
-            await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+            await new Promise(r => setTimeout(r, 200));
 
             let dynamicScale = 2;
             if (targetPatients.length > 5) dynamicScale = 1.5;
             if (targetPatients.length > 15) dynamicScale = 1.2;
 
             const opt = {
-                margin: [0, 0, 0, 0],
+                margin: 0,
                 filename,
                 image: { type: 'jpeg', quality: 0.98 },
                 html2canvas: {
@@ -1382,21 +1372,23 @@
                     windowWidth: 794,
                     width: 794,
                     scrollX: 0,
-                    scrollY: 0
+                    scrollY: 0,
+                    onclone: function(clonedDoc) {
+                        clonedDoc.body.style.width = '794px';
+                        clonedDoc.body.style.minWidth = '794px';
+                        clonedDoc.body.style.background = '#ffffff';
+                    }
                 },
                 jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
                 pagebreak: { mode: ['css', 'legacy'], avoid: ['.avoid-break'] }
             };
 
-            await html2pdf().set(opt).from(printWrapper).save();
+            await html2pdf().set(opt).from(fullHtml).save();
 
         } catch (error) {
             console.error('PDF generation failed:', error);
             alert(`PDF generation failed: ${error.message || 'Please try again.'}`);
         } finally {
-            if (printWrapper && printWrapper.parentNode) {
-                printWrapper.parentNode.removeChild(printWrapper);
-            }
             loader.classList.remove('active');
         }
     };
