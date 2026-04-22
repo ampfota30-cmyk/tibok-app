@@ -986,7 +986,6 @@
         } else { updateNetworkStatus(); }
     }
 
-    // 🟢 FIX: Offline Saving now properly stores Height, Weight, Age, and Baseline BP.
     function saveToQueue(action, data) {
         offlineQueue.push({ action, data });
         localStorage.setItem('ncd_queue', JSON.stringify(offlineQueue));
@@ -1139,11 +1138,13 @@
                 return (a.lastName || "").localeCompare(b.lastName || "");
             });
 
+            // 🟢 UI DOM SWAP: By putting the HTML inside the real document body flow
+            // and hiding the app, iOS will ALWAYS render the PDF instead of blanking out.
             let fullHtml = `
-                <div style="width:794px; min-width:794px; background:#ffffff; color:#000000; font-family:Helvetica, Arial, sans-serif; box-sizing:border-box; padding:20px 40px;">
+                <div style="width:794px; min-width:794px; background:#ffffff; color:#000000; font-family:Helvetica, Arial, sans-serif; box-sizing:border-box; padding:20px 40px; margin: 0 auto;">
                     <style>
                         * { box-sizing: border-box; }
-                        .avoid-break { break-inside: avoid; page-break-inside: avoid; }
+                        .avoid-break { break-inside: avoid; page-break-inside: avoid; display: block; }
                         table { border-collapse: collapse; width: 100%; table-layout: fixed; }
                         tr, td, th { break-inside: avoid; page-break-inside: avoid; }
                         td, th { word-break: break-word; overflow-wrap: break-word; vertical-align: top; }
@@ -1330,59 +1331,60 @@
 
             fullHtml += `</div>`;
 
-            let tempDiv = document.createElement('div');
-            tempDiv.innerHTML = fullHtml;
+            // 🟢 APP SWAP LOGIC: Fixes iOS Blank Pages completely.
+            const appEl = document.getElementById('app');
+            const originalDisplay = appEl.style.display;
+            appEl.style.display = 'none'; // Hide main app to prevent scroll conflicts
 
-            // 🟢 iOS SAFARI BLANK PAGE FIX: We cannot use left: -10000px. 
-            // Instead, we place it directly under the visible app window (top: 0, left: 0),
-            // and simply hide it behind the loading modal using z-index: -9999.
-            tempDiv.style.position = 'fixed';
-            tempDiv.style.left = '0';
-            tempDiv.style.top = '0';
-            tempDiv.style.width = '794px';
-            tempDiv.style.minWidth = '794px';
-            tempDiv.style.background = '#ffffff';
-            tempDiv.style.opacity = '0.01'; // iOS forces render, but it's invisible
-            tempDiv.style.pointerEvents = 'none';
-            tempDiv.style.zIndex = '-9999';
+            const printWrapper = document.createElement('div');
+            printWrapper.id = "print-wrapper";
+            printWrapper.style.width = '794px'; // Ensure explicit pixel width so mobile doesn't crush it
+            printWrapper.style.margin = '0 auto';
+            printWrapper.style.background = '#ffffff';
+            printWrapper.innerHTML = fullHtml;
+            document.body.appendChild(printWrapper);
 
-            document.body.appendChild(tempDiv);
+            // Wait a moment for fonts/CSS to render in the DOM
+            window.scrollTo(0, 0);
+            await new Promise(r => setTimeout(r, 400));
 
-            await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-
+            // 🟢 PREVENT CRASH ON LARGE MASTERFILES
+            let dynamicScale = 2; // High-res default
+            if (targetPatients.length > 5) dynamicScale = 1.5; 
+            if (targetPatients.length > 15) dynamicScale = 1; // Safely fits iOS memory canvas limits
+            
             const opt = {
                 margin: [0, 0, 0, 0],
                 filename: filename,
                 image: { type: 'jpeg', quality: 0.95 },
                 html2canvas: {
-                    scale: 1.5,
+                    scale: dynamicScale,
                     useCORS: true,
                     logging: false,
-                    backgroundColor: '#ffffff',
                     windowWidth: 794,
                     width: 794,
-                    scrollX: 0,
-                    scrollY: 0
+                    onclone: function(clonedDoc) {
+                        const el = clonedDoc.getElementById('print-wrapper');
+                        if(el) {
+                            el.style.width = '794px';
+                            el.style.minWidth = '794px';
+                        }
+                    }
                 },
-                jsPDF: {
-                    unit: 'mm',
-                    format: 'a4',
-                    orientation: 'portrait'
-                },
-                pagebreak: {
-                    mode: ['css', 'legacy']
-                }
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                pagebreak: { mode: ['css', 'legacy'], avoid: ['.avoid-break'] }
             };
 
-            await html2pdf().set(opt).from(tempDiv).save();
+            await html2pdf().set(opt).from(printWrapper).save();
 
         } catch (error) {
             console.error(error);
             alert("PDF generation failed. Please try again.");
         } finally {
-            if (document.getElementById('pdf-render-wrapper')) {
-                document.body.removeChild(document.getElementById('pdf-render-wrapper'));
+            if (document.getElementById('print-wrapper')) {
+                document.body.removeChild(document.getElementById('print-wrapper'));
             }
+            document.getElementById('app').style.display = ''; // Safely restore the app view
             loader.classList.remove('active');
         }
     };
@@ -1470,8 +1472,6 @@
       document.getElementById("addMiddleName").disabled = false;
       document.querySelectorAll(".auto-bhw").forEach(el => el.value = activeUser.name); 
       
-      // 🟢 THE FIX: Collision-proof ID Generation
-      // This prevents multiple devices from randomly generating the same "maxId" while offline.
       const uniqueId = Math.floor(Date.now() / 1000).toString() + Math.floor(Math.random() * 100).toString().padStart(2, '0');
       document.querySelector("#addPatientForm input[name='patientId']").value = uniqueId;
     });
@@ -1744,6 +1744,10 @@
                 document.getElementById("editHomeAddress").value = p.homeAddress || p.address || "";
                 document.getElementById("editPurok").value = p.purok || "";
                 document.getElementById("editNotes").value = (p.notes && p.notes !== "None") ? p.notes : "";
+                
+                // 🟢 FIX 1: Explicitly populate height and weight so they aren't lost!
+                document.getElementById("editHeight").value = p.height || "";
+                document.getElementById("editWeight").value = p.weight || "";
                 
                 const medArray = p.medications || [];
                 const stdMeds = ["Amlodipine", "Nifedipine", "Felodipine", "Losartan", "Valsartan", "Telmisartan", "Furosemide", "Hydrochlorothiazide", "Spironolactone", "Metoprolol", "Carvedilol", "Propanolol", "Captopril", "Lisinopril", "Enalapril"];
