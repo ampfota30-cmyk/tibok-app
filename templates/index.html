@@ -1206,32 +1206,38 @@
                         </div>
                     `;
 
-                    if (visits.length > 0) {
-                        const baseline = visits[visits.length - 1];
-                        const current = visits[0];
-                        const deltaSys = (current.sys || 0) - (baseline.sys || 0);
-                        const deltaDia = (current.dia || 0) - (baseline.dia || 0);
+                    if (p.bp && p.bp.length >= 2) {
+                        const baseline = p.bp[0];
+                        const current = p.bp[p.bp.length - 1];
+                        const sysDiff = (current.sys || 0) - (baseline.sys || 0);
+                        const diaDiff = (current.dia || 0) - (baseline.dia || 0);
 
                         let trend = "Stable";
                         let tColor = "#64748b";
 
-                        if (deltaSys < 0 || deltaDia < 0) {
-                            trend = `Improving (${deltaSys}/${deltaDia})`;
+                        if (sysDiff <= -10 || diaDiff <= -10) {
+                            trend = `Improving (${sysDiff}/${diaDiff})`;
                             tColor = "#047857";
-                        } else if (deltaSys > 0 || deltaDia > 0) {
-                            trend = `Increased (+${deltaSys}/+${deltaDia})`;
+                        } else if (sysDiff < 0 || diaDiff < 0) {
+                            trend = `Slightly Improved`;
+                            tColor = "#047857";
+                        } else if (sysDiff >= 15 || diaDiff >= 10) {
+                            trend = `Significantly Elevated`;
                             tColor = "#b91c1c";
+                        } else if (sysDiff > 0 || diaDiff > 0) {
+                            trend = `Slightly Elevated`;
+                            tColor = "#d97706";
                         }
 
                         progressReport = `
-                            <table style="width:100%; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; background:#fff;">
+                            <table class="avoid-break" style="width:100%; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; background:#fff; margin-bottom:20px;">
                                 <tr>
                                     <td style="padding:10px; border-right:1px solid #e2e8f0; background:#f8fafc; width:33.33%;">
-                                        <div style="color:#64748b; font-size:9px; text-transform:uppercase; font-weight:bold; margin-bottom:4px;">Baseline</div>
+                                        <div style="color:#64748b; font-size:9px; text-transform:uppercase; font-weight:bold; margin-bottom:4px;">Baseline (${String(baseline.date || '').split(" ")[0]})</div>
                                         <div style="font-size:14px; font-weight:bold; color:#0f172a;">${baseline.sys || '-'} / ${baseline.dia || '-'}</div>
                                     </td>
                                     <td style="padding:10px; border-right:1px solid #e2e8f0; background:#f8fafc; width:33.33%;">
-                                        <div style="color:#64748b; font-size:9px; text-transform:uppercase; font-weight:bold; margin-bottom:4px;">Current</div>
+                                        <div style="color:#64748b; font-size:9px; text-transform:uppercase; font-weight:bold; margin-bottom:4px;">Current (${String(current.date || '').split(" ")[0]})</div>
                                         <div style="font-size:14px; font-weight:bold; color:#0f172a;">${current.sys || '-'} / ${current.dia || '-'}</div>
                                     </td>
                                     <td style="padding:10px; background:#fff; width:33.33%;">
@@ -1243,34 +1249,52 @@
                         `;
                     }
 
-                    const visitsTable = visits.length
-                        ? `
-                            <table style="font-size:11px; margin-top:8px;">
+                    let visitsTable = "";
+                    if (visits.length > 0) {
+                        visitsTable = `
+                            <table class="avoid-break" style="font-size:11px; margin-bottom:20px; width: 100%;">
                                 <thead>
-                                    <tr>
-                                        <th style="border:1px solid #e2e8f0; padding:8px; background:#f8fafc;">Date</th>
-                                        <th style="border:1px solid #e2e8f0; padding:8px; background:#f8fafc;">BP</th>
-                                        <th style="border:1px solid #e2e8f0; padding:8px; background:#f8fafc;">Type</th>
-                                        <th style="border:1px solid #e2e8f0; padding:8px; background:#f8fafc;">Notes</th>
+                                    <tr style="background:#f1f5f9; color:#475569; border-bottom:2px solid #cbd5e1;">
+                                        <th style="width:12%; padding:8px; text-align: left;">Date</th>
+                                        <th style="width:17%; padding:8px; text-align: left;">Type</th>
+                                        <th style="width:17%; padding:8px; text-align: left;">Vitals/BMI</th>
+                                        <th style="width:27%; padding:8px; text-align: left;">Medications</th>
+                                        <th style="width:27%; padding:8px; text-align: left;">Notes/By</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    ${visits.map(v => `
-                                        <tr>
-                                            <td style="border:1px solid #e2e8f0; padding:8px;">${v.date || 'N/A'}</td>
-                                            <td style="border:1px solid #e2e8f0; padding:8px;">${v.sys || '-'} / ${v.dia || '-'}</td>
-                                            <td style="border:1px solid #e2e8f0; padding:8px;">${v.visitType || 'N/A'}</td>
-                                            <td style="border:1px solid #e2e8f0; padding:8px;">${v.notes || ''}</td>
-                                        </tr>
-                                    `).join("")}
+                                    ${visits.slice(0, 10).map((v, i) => {
+                                        let vBmi = "N/A";
+                                        if (v.height > 0 && v.weight > 0) {
+                                            vBmi = (v.weight / Math.pow(v.height / 100, 2)).toFixed(1);
+                                        }
+                                        const vMeds = (v.medications && v.medications.length > 0)
+                                            ? v.medications.join(", ")
+                                            : "--";
+                                        const rowBg = i % 2 === 0 ? "#ffffff" : "#f8fafc";
+
+                                        return `
+                                            <tr style="background:${rowBg}; border-bottom:1px solid #e2e8f0;">
+                                                <td style="padding:10px 8px; font-weight:bold; vertical-align: top;">${String(v.date || '').split(" ")[0]}</td>
+                                                <td style="padding:10px 8px; vertical-align: top;">${v.title || '--'}</td>
+                                                <td style="padding:10px 8px; vertical-align: top;">
+                                                    <span style="color:#dc2626; font-weight:bold;">BP: ${v.avg || '--'}</span><br>
+                                                    <span style="color:#64748b; font-size:9px;">BMI: ${vBmi}</span>
+                                                </td>
+                                                <td style="padding:10px 8px; vertical-align: top;">${vMeds}</td>
+                                                <td style="padding:10px 8px; line-height:1.4; vertical-align: top;">
+                                                    ${v.notes || 'No notes.'}<br>
+                                                    <span style="color:#94a3b8; font-size:9px;">- ${v.assessed_by || 'N/A'}</span>
+                                                </td>
+                                            </tr>
+                                        `;
+                                    }).join("")}
                                 </tbody>
                             </table>
-                        `
-                        : `
-                            <div style="font-size:11px; color:#64748b; border:1px solid #e2e8f0; border-radius:8px; padding:12px; background:#f8fafc;">
-                                No visit history recorded.
-                            </div>
                         `;
+                    } else {
+                        visitsTable = `<div style="font-size:11px; color:#64748b; border:1px solid #e2e8f0; border-radius:8px; padding:12px; background:#f8fafc;">No clinical visits recorded.</div>`;
+                    }
 
                     if (index > 0) fullHtml += `<div class="page-break"></div>`;
 
@@ -1355,6 +1379,22 @@
                     const part = Math.floor(i / batchSize) + 1;
                     const htmlString = buildHtml(chunk, `${reportTitle} (Part ${part})`, targetPatients.length);
 
+                    let printWrapper = document.createElement('div');
+                    printWrapper.id = 'print-wrapper';
+                    printWrapper.style.position = 'absolute';
+                    printWrapper.style.left = '0';
+                    printWrapper.style.top = '0';
+                    printWrapper.style.width = '794px';
+                    printWrapper.style.minWidth = '794px';
+                    printWrapper.style.background = '#ffffff';
+                    printWrapper.style.opacity = '0.01';
+                    printWrapper.style.pointerEvents = 'none';
+                    printWrapper.style.zIndex = '-9999';
+                    printWrapper.innerHTML = htmlString;
+                    document.body.appendChild(printWrapper);
+
+                    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+
                     await html2pdf().set({
                         margin: 0,
                         filename: `TIBOK_Master_Registry_Part_${part}_${new Date().toISOString().split('T')[0]}.pdf`,
@@ -1377,10 +1417,28 @@
                         },
                         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
                         pagebreak: { mode: ['css', 'legacy'], avoid: ['.avoid-break'] }
-                    }).from(htmlString).save();
+                    }).from(printWrapper).save();
+
+                    document.body.removeChild(printWrapper);
                 }
             } else {
                 const htmlString = buildHtml(targetPatients, reportTitle, targetPatients.length);
+
+                let printWrapper = document.createElement('div');
+                printWrapper.id = 'print-wrapper';
+                printWrapper.style.position = 'absolute';
+                printWrapper.style.left = '0';
+                printWrapper.style.top = '0';
+                printWrapper.style.width = '794px';
+                printWrapper.style.minWidth = '794px';
+                printWrapper.style.background = '#ffffff';
+                printWrapper.style.opacity = '0.01';
+                printWrapper.style.pointerEvents = 'none';
+                printWrapper.style.zIndex = '-9999';
+                printWrapper.innerHTML = htmlString;
+                document.body.appendChild(printWrapper);
+
+                await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 
                 let dynamicScale = 2;
                 if (mode === 'purok') dynamicScale = 1.2;
@@ -1409,12 +1467,16 @@
                     },
                     jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
                     pagebreak: { mode: ['css', 'legacy'], avoid: ['.avoid-break'] }
-                }).from(htmlString).save();
+                }).from(printWrapper).save();
+
+                document.body.removeChild(printWrapper);
             }
 
         } catch (error) {
             console.error('PDF generation failed:', error);
             alert(`PDF generation failed: ${error.message || 'Please try again.'}`);
+            const pw = document.getElementById('print-wrapper');
+            if (pw) document.body.removeChild(pw);
         } finally {
             loader.classList.remove('active');
         }
