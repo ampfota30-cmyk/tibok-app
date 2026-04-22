@@ -1108,15 +1108,12 @@
         }
 
         closeExportModal();
-
         const loader = document.getElementById('loadingModal');
         const exportModal = document.getElementById('exportModal');
         const confirmModal = document.getElementById('confirmModal');
         const aboutModal = document.getElementById('aboutModal');
 
         loader.classList.add('active');
-
-        let printWrapper = null;
 
         try {
             const response = await fetch('/api/data', { cache: 'no-store' });
@@ -1158,232 +1155,264 @@
                 return (a.lastName || "").localeCompare(b.lastName || "");
             });
 
-            let fullHtml = `
-                <div style="width:794px; min-width:794px; background:#ffffff; color:#000000; font-family:Helvetica, Arial, sans-serif; box-sizing:border-box; padding:20px 40px;">
-                    <style>
-                        * { box-sizing: border-box; }
-                        .avoid-break { break-inside: avoid; page-break-inside: avoid; display: block; }
-                        table { border-collapse: collapse; width: 100%; table-layout: fixed; }
-                        tr, td, th { break-inside: avoid; page-break-inside: avoid; }
-                        td, th { word-break: break-word; overflow-wrap: break-word; vertical-align: top; }
-                        .page-break { page-break-before: always; break-before: page; }
-                        body { background: #ffffff !important; }
-                    </style>
+            const buildHtml = (patientsChunk, titleText, totalCount) => {
+                let fullHtml = `
+                    <div style="width:794px; min-width:794px; max-width:794px; background:#ffffff; color:#000000; font-family:Helvetica, Arial, sans-serif; box-sizing:border-box; padding:20px 40px;">
+                        <style>
+                            * { box-sizing: border-box; }
+                            .avoid-break { break-inside: avoid; page-break-inside: avoid; display: block; }
+                            table { border-collapse: collapse; width: 100%; table-layout: fixed; }
+                            tr, td, th { break-inside: avoid; page-break-inside: avoid; }
+                            td, th { word-break: break-word; overflow-wrap: break-word; vertical-align: top; }
+                            .page-break { page-break-before: always; break-before: page; }
+                            body { background: #ffffff !important; margin: 0; }
+                        </style>
 
-                    <div style="border-bottom:2px solid #dc2626; padding-bottom:15px; margin-bottom:25px;">
-                        <table style="width:100%;">
-                            <tr>
-                                <td style="text-align:left;">
-                                    <h1 style="color:#dc2626; margin:0 0 5px 0; font-size:26px;">TIBOK Health Registry</h1>
-                                    <p style="margin:0; color:#64748b; font-size:12px; font-weight:bold; text-transform:uppercase;">${reportTitle}</p>
-                                </td>
-                                <td style="text-align:right;">
-                                    <p style="margin:0; color:#64748b; font-size:10px;">Generated: ${new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila' })}</p>
-                                    <p style="margin:5px 0 0 0; color:#0f172a; font-size:12px; font-weight:bold;">Total Records: ${targetPatients.length}</p>
-                                </td>
-                            </tr>
-                        </table>
-                    </div>
-            `;
-
-            targetPatients.forEach((p, index) => {
-                const medsStr = (p.medications && p.medications.length > 0)
-                    ? p.medications.join(", ")
-                    : "None recorded";
-
-                let bmiDisplay = "N/A";
-                if (p.height > 0 && p.weight > 0) {
-                    const heightM = p.height / 100;
-                    const bmi = (p.weight / (heightM * heightM)).toFixed(1);
-                    bmiDisplay = `${bmi} (H: ${p.height}cm, W: ${p.weight}kg)`;
-                } else if (p.height || p.weight) {
-                    bmiDisplay = `H: ${p.height || 'N/A'}cm, W: ${p.weight || 'N/A'}kg`;
-                }
-
-                let progressReport = `<p style="font-size:11px; color:#64748b;">Not enough data to calculate trend.</p>`;
-                if (p.bp && p.bp.length >= 2) {
-                    const baseline = p.bp[0];
-                    const current = p.bp[p.bp.length - 1];
-                    const sysDiff = current.sys - baseline.sys;
-                    const diaDiff = current.dia - baseline.dia;
-
-                    let trend = "Stable";
-                    let tColor = "#64748b";
-                    if (sysDiff <= -10 || diaDiff <= -10) { trend = "Improved"; tColor = "#059669"; }
-                    else if (sysDiff < 0 || diaDiff < 0) { trend = "Slightly Improved"; tColor = "#059669"; }
-                    else if (sysDiff >= 15 || diaDiff >= 10) { trend = "Significantly Elevated"; tColor = "#dc2626"; }
-                    else if (sysDiff > 0 || diaDiff > 0) { trend = "Slightly Elevated"; tColor = "#d97706"; }
-
-                    progressReport = `
-                        <table class="avoid-break" style="margin-bottom:20px; border:1px solid #e2e8f0;">
-                            <tr>
-                                <td style="width:33.33%; padding:10px; border-right:1px solid #e2e8f0; background:#f8fafc; text-align:center;">
-                                    <div style="color:#64748b; font-size:9px; text-transform:uppercase; font-weight:bold; margin-bottom:4px;">Baseline (${String(baseline.date || '').split(" ")[0]})</div>
-                                    <div style="font-size:14px; font-weight:bold; color:#0f172a;">${baseline.sys}/${baseline.dia}</div>
-                                </td>
-                                <td style="width:33.33%; padding:10px; border-right:1px solid #e2e8f0; background:#f8fafc; text-align:center;">
-                                    <div style="color:#64748b; font-size:9px; text-transform:uppercase; font-weight:bold; margin-bottom:4px;">Current (${String(current.date || '').split(" ")[0]})</div>
-                                    <div style="font-size:14px; font-weight:bold; color:#0f172a;">${current.sys}/${current.dia}</div>
-                                </td>
-                                <td style="width:33.33%; padding:10px; background:#fff; text-align:center;">
-                                    <div style="color:#64748b; font-size:9px; text-transform:uppercase; font-weight:bold; margin-bottom:4px;">Trend</div>
-                                    <div style="font-size:12px; font-weight:bold; color:${tColor};">${trend}</div>
-                                </td>
-                            </tr>
-                        </table>
-                    `;
-                }
-
-                let visitsTable = "";
-                if (p.visits && p.visits.length > 0) {
-                    visitsTable = `
-                        <table class="avoid-break" style="font-size:11px; margin-bottom:20px;">
-                            <thead>
-                                <tr style="background:#f1f5f9; color:#475569; border-bottom:2px solid #cbd5e1;">
-                                    <th style="width:12%; padding:8px;">Date</th>
-                                    <th style="width:17%; padding:8px;">Type</th>
-                                    <th style="width:17%; padding:8px;">Vitals/BMI</th>
-                                    <th style="width:27%; padding:8px;">Medications</th>
-                                    <th style="width:27%; padding:8px;">Notes/By</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${p.visits.slice(0, 10).map((v, i) => {
-                                    let vBmi = "N/A";
-                                    if (v.height > 0 && v.weight > 0) {
-                                        vBmi = (v.weight / Math.pow(v.height / 100, 2)).toFixed(1);
-                                    }
-                                    const vMeds = (v.medications && v.medications.length > 0)
-                                        ? v.medications.join(", ")
-                                        : "--";
-                                    const rowBg = i % 2 === 0 ? "#ffffff" : "#f8fafc";
-
-                                    return `
-                                        <tr style="background:${rowBg}; border-bottom:1px solid #e2e8f0;">
-                                            <td style="padding:10px 8px; font-weight:bold;">${String(v.date || '').split(" ")[0]}</td>
-                                            <td style="padding:10px 8px;">${v.title || '--'}</td>
-                                            <td style="padding:10px 8px;">
-                                                <span style="color:#dc2626; font-weight:bold;">BP: ${v.avg || '--'}</span><br>
-                                                <span style="color:#64748b; font-size:9px;">BMI: ${vBmi}</span>
-                                            </td>
-                                            <td style="padding:10px 8px;">${vMeds}</td>
-                                            <td style="padding:10px 8px; line-height:1.4;">
-                                                ${v.notes || 'No notes.'}<br>
-                                                <span style="color:#94a3b8; font-size:9px;">- ${v.assessed_by || 'N/A'}</span>
-                                            </td>
-                                        </tr>
-                                    `;
-                                }).join("")}
-                            </tbody>
-                        </table>
-                    `;
-                } else {
-                    visitsTable = `<p style="font-size:11px; color:#64748b;">No clinical visits recorded.</p>`;
-                }
-
-                if (index > 0) fullHtml += `<div class="page-break"></div>`;
-
-                fullHtml += `
-                    <div class="avoid-break" style="margin-bottom:30px; padding-bottom:20px; border-bottom:2px dashed #cbd5e1;">
-                        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px; margin-bottom:16px;">
-                            <table>
+                        <div style="border-bottom:2px solid #dc2626; padding-bottom:15px; margin-bottom:25px;">
+                            <table style="width:100%;">
                                 <tr>
-                                    <td style="width:70%;">
-                                        <h2 style="margin:0; font-size:18px; font-weight:bold; color:#0f172a;">
-                                            ${index + 1}. ${p.lastName || ''}, ${p.firstName || ''} ${p.middleName || ''}
-                                        </h2>
+                                    <td style="text-align:left;">
+                                        <h1 style="color:#dc2626; margin:0 0 5px 0; font-size:26px;">TIBOK Health Registry</h1>
+                                        <p style="margin:0; color:#64748b; font-size:12px; font-weight:bold; text-transform:uppercase;">${titleText}</p>
                                     </td>
-                                    <td style="width:30%; text-align:right;">
-                                        <span style="background:#d1fae5; color:#047857; padding:4px 8px; border-radius:4px; font-size:10px; font-weight:bold; text-transform:uppercase; border:1px solid #34d399;">
-                                            ${p.status || 'ACTIVE'}
-                                        </span>
+                                    <td style="text-align:right;">
+                                        <p style="margin:0; color:#64748b; font-size:10px;">Generated: ${new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila' })}</p>
+                                        <p style="margin:5px 0 0 0; color:#0f172a; font-size:12px; font-weight:bold;">Total Records: ${totalCount}</p>
                                     </td>
                                 </tr>
                             </table>
-
-                            <table style="font-size:11px; line-height:1.5; margin-top:8px;">
-                                <tr>
-                                    <td style="width:15%; color:#64748b; padding:2px 0;">Patient ID:</td>
-                                    <td style="width:35%; font-weight:bold; color:#0f172a; padding:2px 0;">${p.id || '--'}</td>
-                                    <td style="width:15%; color:#64748b; padding:2px 0;">Location:</td>
-                                    <td style="width:35%; font-weight:bold; color:#0f172a; padding:2px 0;">Purok ${p.purok || 'N/A'}</td>
-                                </tr>
-                                <tr>
-                                    <td style="color:#64748b; padding:2px 0;">Age/Sex:</td>
-                                    <td style="font-weight:bold; color:#0f172a; padding:2px 0;">${p.age || '--'} yrs / ${p.sex || '--'}</td>
-                                    <td style="color:#64748b; padding:2px 0;">Contact:</td>
-                                    <td style="font-weight:bold; color:#0f172a; padding:2px 0;">${p.contact || 'N/A'}</td>
-                                </tr>
-                                <tr>
-                                    <td style="color:#64748b; padding:2px 0; border-top:1px solid #e2e8f0;">BMI Profile:</td>
-                                    <td colspan="3" style="font-weight:bold; color:#0f172a; padding:2px 0; border-top:1px solid #e2e8f0;">${bmiDisplay}</td>
-                                </tr>
-                            </table>
                         </div>
-
-                        <table class="avoid-break" style="margin-bottom:20px;">
-                            <tr>
-                                <td style="width:48%; border:1px solid #fee2e2; background:#fef2f2; padding:10px; border-radius:8px; vertical-align:top;">
-                                    <div style="color:#b91c1c; font-size:10px; text-transform:uppercase; font-weight:bold; margin-bottom:4px;">Current Medications</div>
-                                    <div style="font-size:11px; color:#7f1d1d; font-weight:bold;">${medsStr}</div>
-                                </td>
-                                <td style="width:4%;"></td>
-                                <td style="width:48%; border:1px solid #e2e8f0; background:#f8fafc; padding:10px; border-radius:8px; vertical-align:top;">
-                                    <div style="color:#64748b; font-size:10px; text-transform:uppercase; font-weight:bold; margin-bottom:4px;">General Notes</div>
-                                    <div style="font-size:11px; color:#334155;">${p.notes || 'No general notes recorded.'}</div>
-                                </td>
-                            </tr>
-                        </table>
-
-                        <div class="avoid-break">
-                            <h3 style="font-size:13px; color:#0f172a; margin:0 0 8px 0; border-bottom:2px solid #e2e8f0; padding-bottom:4px;">Clinical Progress</h3>
-                            ${progressReport}
-                        </div>
-
-                        <div>
-                            <h3 class="avoid-break" style="font-size:13px; color:#0f172a; margin:16px 0 8px 0; border-bottom:2px solid #e2e8f0; padding-bottom:4px;">Recent Visit History</h3>
-                            ${visitsTable}
-                        </div>
-                    </div>
                 `;
-            });
 
-            fullHtml += `</div>`;
+                patientsChunk.forEach((p, index) => {
+                    const medsStr = (p.medications && p.medications.length > 0)
+                        ? p.medications.join(", ")
+                        : "None recorded";
+
+                    let bmiDisplay = "N/A";
+                    if (p.height > 0 && p.weight > 0) {
+                        const heightM = p.height / 100;
+                        const bmi = (p.weight / (heightM * heightM)).toFixed(1);
+                        bmiDisplay = `${bmi} (H: ${p.height}cm, W: ${p.weight}kg)`;
+                    } else if (p.height > 0 || p.weight > 0) {
+                        bmiDisplay = `H: ${p.height || '--'}cm, W: ${p.weight || '--'}kg`;
+                    }
+
+                    const visits = Array.isArray(p.visits) ? [...p.visits] : [];
+                    visits.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+
+                    let progressReport = `
+                        <div style="font-size:11px; color:#64748b; border:1px solid #e2e8f0; border-radius:8px; padding:12px; background:#f8fafc;">
+                            No BP progress data available.
+                        </div>
+                    `;
+
+                    if (visits.length > 0) {
+                        const baseline = visits[visits.length - 1];
+                        const current = visits[0];
+                        const deltaSys = (current.sys || 0) - (baseline.sys || 0);
+                        const deltaDia = (current.dia || 0) - (baseline.dia || 0);
+
+                        let trend = "Stable";
+                        let tColor = "#64748b";
+
+                        if (deltaSys < 0 || deltaDia < 0) {
+                            trend = `Improving (${deltaSys}/${deltaDia})`;
+                            tColor = "#047857";
+                        } else if (deltaSys > 0 || deltaDia > 0) {
+                            trend = `Increased (+${deltaSys}/+${deltaDia})`;
+                            tColor = "#b91c1c";
+                        }
+
+                        progressReport = `
+                            <table style="width:100%; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; background:#fff;">
+                                <tr>
+                                    <td style="padding:10px; border-right:1px solid #e2e8f0; background:#f8fafc; width:33.33%;">
+                                        <div style="color:#64748b; font-size:9px; text-transform:uppercase; font-weight:bold; margin-bottom:4px;">Baseline</div>
+                                        <div style="font-size:14px; font-weight:bold; color:#0f172a;">${baseline.sys || '-'} / ${baseline.dia || '-'}</div>
+                                    </td>
+                                    <td style="padding:10px; border-right:1px solid #e2e8f0; background:#f8fafc; width:33.33%;">
+                                        <div style="color:#64748b; font-size:9px; text-transform:uppercase; font-weight:bold; margin-bottom:4px;">Current</div>
+                                        <div style="font-size:14px; font-weight:bold; color:#0f172a;">${current.sys || '-'} / ${current.dia || '-'}</div>
+                                    </td>
+                                    <td style="padding:10px; background:#fff; width:33.33%;">
+                                        <div style="color:#64748b; font-size:9px; text-transform:uppercase; font-weight:bold; margin-bottom:4px;">Trend</div>
+                                        <div style="font-size:12px; font-weight:bold; color:${tColor};">${trend}</div>
+                                    </td>
+                                </tr>
+                            </table>
+                        `;
+                    }
+
+                    const visitsTable = visits.length
+                        ? `
+                            <table style="font-size:11px; margin-top:8px;">
+                                <thead>
+                                    <tr>
+                                        <th style="border:1px solid #e2e8f0; padding:8px; background:#f8fafc;">Date</th>
+                                        <th style="border:1px solid #e2e8f0; padding:8px; background:#f8fafc;">BP</th>
+                                        <th style="border:1px solid #e2e8f0; padding:8px; background:#f8fafc;">Type</th>
+                                        <th style="border:1px solid #e2e8f0; padding:8px; background:#f8fafc;">Notes</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${visits.map(v => `
+                                        <tr>
+                                            <td style="border:1px solid #e2e8f0; padding:8px;">${v.date || 'N/A'}</td>
+                                            <td style="border:1px solid #e2e8f0; padding:8px;">${v.sys || '-'} / ${v.dia || '-'}</td>
+                                            <td style="border:1px solid #e2e8f0; padding:8px;">${v.visitType || 'N/A'}</td>
+                                            <td style="border:1px solid #e2e8f0; padding:8px;">${v.notes || ''}</td>
+                                        </tr>
+                                    `).join("")}
+                                </tbody>
+                            </table>
+                        `
+                        : `
+                            <div style="font-size:11px; color:#64748b; border:1px solid #e2e8f0; border-radius:8px; padding:12px; background:#f8fafc;">
+                                No visit history recorded.
+                            </div>
+                        `;
+
+                    if (index > 0) fullHtml += `<div class="page-break"></div>`;
+
+                    fullHtml += `
+                        <div class="avoid-break" style="margin-bottom:30px; padding-bottom:20px; border-bottom:2px dashed #cbd5e1;">
+                            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px; margin-bottom:16px;">
+                                <table style="margin-bottom:8px;">
+                                    <tr>
+                                        <td style="text-align:left; width:75%;">
+                                            <h2 style="margin:0; font-size:18px; font-weight:bold; color:#0f172a;">
+                                                ${index + 1}. ${p.lastName || ''}, ${p.firstName || ''} ${p.middleName || ''}
+                                            </h2>
+                                        </td>
+                                        <td style="text-align:right; width:25%;">
+                                            <span style="background:#d1fae5; color:#047857; padding:4px 8px; border-radius:4px; font-size:10px; font-weight:bold; text-transform:uppercase; border:1px solid #34d399;">
+                                                ${p.status || 'ACTIVE'}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                </table>
+
+                                <table style="font-size:11px; line-height:1.5;">
+                                    <tr>
+                                        <td style="width:15%; color:#64748b; padding:2px 0;">Patient ID:</td>
+                                        <td style="width:35%; font-weight:bold; color:#0f172a; padding:2px 0;">${p.id || 'N/A'}</td>
+                                        <td style="width:15%; color:#64748b; padding:2px 0;">Location:</td>
+                                        <td style="width:35%; font-weight:bold; color:#0f172a; padding:2px 0;">Purok ${p.purok || 'N/A'}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="color:#64748b; padding:2px 0;">Age/Sex:</td>
+                                        <td style="font-weight:bold; color:#0f172a; padding:2px 0;">${p.age || 'N/A'} yrs / ${p.sex || 'N/A'}</td>
+                                        <td style="color:#64748b; padding:2px 0;">Contact:</td>
+                                        <td style="font-weight:bold; color:#0f172a; padding:2px 0;">${p.contact || 'N/A'}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="color:#64748b; padding:2px 0; border-top:1px solid #e2e8f0;">BMI Profile:</td>
+                                        <td colspan="3" style="font-weight:bold; color:#0f172a; padding:2px 0; border-top:1px solid #e2e8f0;">${bmiDisplay}</td>
+                                    </tr>
+                                </table>
+                            </div>
+
+                            <table class="avoid-break" style="margin-bottom:20px;">
+                                <tr>
+                                    <td style="width:48%; border:1px solid #fee2e2; background:#fef2f2; padding:10px; border-radius:8px; vertical-align:top;">
+                                        <div style="color:#b91c1c; font-size:10px; text-transform:uppercase; font-weight:bold; margin-bottom:4px;">Current Medications</div>
+                                        <div style="font-size:11px; color:#7f1d1d; font-weight:bold;">${medsStr}</div>
+                                    </td>
+                                    <td style="width:4%;"></td>
+                                    <td style="width:48%; border:1px solid #e2e8f0; background:#f8fafc; padding:10px; border-radius:8px; vertical-align:top;">
+                                        <div style="color:#64748b; font-size:10px; text-transform:uppercase; font-weight:bold; margin-bottom:4px;">General Notes</div>
+                                        <div style="font-size:11px; color:#334155;">${p.notes || 'No general notes recorded.'}</div>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <div class="avoid-break">
+                                <h3 style="font-size:13px; color:#0f172a; margin:0 0 8px 0; border-bottom:2px solid #e2e8f0; padding-bottom:4px;">Clinical Progress</h3>
+                                ${progressReport}
+                            </div>
+
+                            <div>
+                                <h3 class="avoid-break" style="font-size:13px; color:#0f172a; margin:16px 0 8px 0; border-bottom:2px solid #e2e8f0; padding-bottom:4px;">Recent Visit History</h3>
+                                ${visitsTable}
+                            </div>
+                        </div>
+                    `;
+                });
+
+                fullHtml += `</div>`;
+                return fullHtml;
+            };
 
             exportModal.classList.remove('active');
             confirmModal.classList.remove('active');
             aboutModal.classList.remove('active');
-
             await new Promise(r => setTimeout(r, 200));
 
-            let dynamicScale = 2;
-            if (targetPatients.length > 5) dynamicScale = 1.5;
-            if (targetPatients.length > 15) dynamicScale = 1.2;
+            if (mode === 'all') {
+                const batchSize = 8;
+                for (let i = 0; i < targetPatients.length; i += batchSize) {
+                    const chunk = targetPatients.slice(i, i + batchSize);
+                    const part = Math.floor(i / batchSize) + 1;
+                    const html = buildHtml(chunk, `${reportTitle} (Part ${part})`, targetPatients.length);
 
-            const opt = {
-                margin: 0,
-                filename,
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: {
-                    scale: dynamicScale,
-                    useCORS: true,
-                    logging: false,
-                    backgroundColor: '#ffffff',
-                    windowWidth: 794,
-                    width: 794,
-                    scrollX: 0,
-                    scrollY: 0,
-                    onclone: function(clonedDoc) {
-                        clonedDoc.body.style.width = '794px';
-                        clonedDoc.body.style.minWidth = '794px';
-                        clonedDoc.body.style.background = '#ffffff';
-                    }
-                },
-                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-                pagebreak: { mode: ['css', 'legacy'], avoid: ['.avoid-break'] }
-            };
+                    await html2pdf().set({
+                        margin: 0, 
+                        filename: `TIBOK_Master_Registry_Part_${part}_${new Date().toISOString().split('T')[0]}.pdf`,
+                        image: { type: 'jpeg', quality: 0.92 },
+                        html2canvas: {
+                            scale: 0.8,
+                            useCORS: true,
+                            logging: false,
+                            backgroundColor: '#ffffff',
+                            windowWidth: 794,
+                            width: 794,
+                            scrollX: 0,
+                            scrollY: 0,
+                            onclone: function(clonedDoc) {
+                                clonedDoc.body.style.width = '794px';
+                                clonedDoc.body.style.minWidth = '794px';
+                                clonedDoc.body.style.background = '#ffffff';
+                                clonedDoc.documentElement.style.background = '#ffffff';
+                            }
+                        },
+                        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                        pagebreak: { mode: ['css', 'legacy'], avoid: ['.avoid-break'] }
+                    }).from(html).save();
+                }
+            } else {
+                const html = buildHtml(targetPatients, reportTitle, targetPatients.length);
 
-            await html2pdf().set(opt).from(fullHtml).save();
+                let dynamicScale = 2;
+                if (mode === 'purok') dynamicScale = 1.2;
+                if (mode === 'all') dynamicScale = 0.8;
+
+                await html2pdf().set({
+                    margin: 0, 
+                    filename,
+                    image: { type: 'jpeg', quality: 0.96 },
+                    html2canvas: {
+                        scale: dynamicScale,
+                        useCORS: true,
+                        logging: false,
+                        backgroundColor: '#ffffff',
+                        windowWidth: 794,
+                        width: 794,
+                        scrollX: 0,
+                        scrollY: 0,
+                        onclone: function(clonedDoc) {
+                            clonedDoc.body.style.width = '794px';
+                            clonedDoc.body.style.minWidth = '794px';
+                            clonedDoc.body.style.maxWidth = '794px';
+                            clonedDoc.body.style.background = '#ffffff';
+                            clonedDoc.documentElement.style.background = '#ffffff';
+                            clonedDoc.body.style.margin = '0';
+                        }
+                    },
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                    pagebreak: { mode: ['css', 'legacy'], avoid: ['.avoid-break'] }
+                }).from(html).save();
+            }
 
         } catch (error) {
             console.error('PDF generation failed:', error);
